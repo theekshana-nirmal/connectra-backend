@@ -1,9 +1,6 @@
 spring:
   application:
     name: connectra-backend
-  config:
-    activate:
-      on-profile: prod
 
   datasource:
     url: ${DB_URL}
