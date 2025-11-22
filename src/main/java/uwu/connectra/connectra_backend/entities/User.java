@@ -1,6 +1,5 @@
 package uwu.connectra.connectra_backend.entities;
 
-
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,6 +18,18 @@ public abstract class User implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+
+    @Column(name = "first_name")
+    private String first_name;
+
+    @Column(name = "last_name")
+    private String last_name;
+
+    @Column(name = "hashed_password")
+    private String hashed_password;
+
+    @Column(name = "profile_photo_url")
+    private String profile_photo_url = "https://placehold.co/100x100"; // Default URL
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false)
