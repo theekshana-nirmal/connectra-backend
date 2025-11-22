@@ -1,19 +1,17 @@
 package uwu.connectra.connectra_backend.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @NoArgsConstructor
-@Table(name="students")
+@Table(name = "students")
 @Getter
 @Setter
 @Entity
-public class Student extends User{
+public class Student extends User {
+
     @Column(name = "first_name")
     private String first_name;
 
@@ -33,5 +31,12 @@ public class Student extends User{
     private String hashed_password;
 
     @Column(name = "profile_photo_url")
-    private String profile_photo_url = "https://placehold.co/100x100"; //Default URL
+    private String profile_photo_url = "https://placehold.co/100x100"; // Default URL
+
+    @PrePersist // Set default role as STUDENT before saving to database
+    protected void onCreate() {
+        if (this.getRole() == null) {
+            this.setRole(Role.STUDENT);
+        }
+    }
 }
