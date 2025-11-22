@@ -17,9 +17,6 @@ public class Student extends User {
     @Column(name = "batch")
     private int batch;
 
-    @Column(name = "student_email")
-    private String student_email;
-
     @PrePersist // Set default role as STUDENT before saving to database
     protected void onCreate() {
         if (this.getRole() == null) {

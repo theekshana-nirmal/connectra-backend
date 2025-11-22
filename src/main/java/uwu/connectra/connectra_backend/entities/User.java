@@ -25,6 +25,9 @@ public abstract class User implements Serializable {
     @Column(name = "last_name")
     private String last_name;
 
+    @Column(name = "email")
+    private String email;
+
     @Column(name = "hashed_password")
     private String hashed_password;
 
