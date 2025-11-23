@@ -25,3 +25,8 @@ springdoc:
     enabled: false
   api-docs:
     enabled: false
+
+# Default Admin Account (Seeder)
+default-admin:
+  email: ${ADMIN_EMAIL}
+  password: ${ADMIN_PASSWORD}
