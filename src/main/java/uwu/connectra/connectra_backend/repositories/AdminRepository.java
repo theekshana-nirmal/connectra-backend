@@ -5,5 +5,5 @@ import org.springframework.stereotype.Repository;
 import uwu.connectra.connectra_backend.entities.Admin;
 
 @Repository
-public interface AdminRepository extends JpaRepository<Admin, Long> {
+public interface AdminRepository extends BaseRepository<Admin, Long> {
 }
