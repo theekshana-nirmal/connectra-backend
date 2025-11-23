@@ -21,5 +21,4 @@ public class Admin extends User{
             this.setRole(Role.ADMIN);
         }
     }
-
 }
