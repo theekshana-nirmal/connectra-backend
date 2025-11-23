@@ -11,6 +11,8 @@ import lombok.Setter;
 @Setter
 @Entity
 public class Student extends User {
+    //All other common fields are inherit from User class
+
     @Column(name = "degree")
     private String degree;
 
