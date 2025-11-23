@@ -1,6 +1,7 @@
 package uwu.connectra.connectra_backend.seeders;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -8,7 +9,8 @@ import org.springframework.stereotype.Component;
 import uwu.connectra.connectra_backend.entities.Admin;
 import uwu.connectra.connectra_backend.repositories.AdminRepository;
 
-// This class use to create a default admin account in the database in the first time database start
+// Create a default admin account in the database in the first time database start
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AdminSeeder implements CommandLineRunner {
@@ -22,11 +24,11 @@ public class AdminSeeder implements CommandLineRunner {
     @Value("${ADMIN_PASSWORD}")
     private String admin_row_password;
 
-    String hashed_password = passwordEncoder.encode(admin_row_password);
-
     @Override
     public void run(String... args){
-        if(!adminRepository.existsByEmail("${ADMIN_EMAIL}")){
+        if(!adminRepository.existsByEmail(admin_email)){
+            String hashed_password = passwordEncoder.encode(admin_row_password);
+
             Admin adminUser = new Admin();
             adminUser.setFirst_name("Connectra");
             adminUser.setLast_name("Admin");
@@ -34,7 +36,9 @@ public class AdminSeeder implements CommandLineRunner {
             adminUser.setHashed_password(hashed_password);
 
             adminRepository.save(adminUser);
-            System.out.println("Default Admin account created!");
+            log.info("✅ Default Admin account created!");
+        }else {
+            log.info("💻 Admin account already exists. Skipping seeding.");
         }
     }
 }
