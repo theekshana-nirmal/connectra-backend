@@ -9,7 +9,6 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@Table(name = "lecturers")
 @DiscriminatorValue("LECTURER")
 public class Lecturer extends User{
     @Column(name = "department")
