@@ -2,8 +2,12 @@ package uwu.connectra.connectra_backend.services;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import uwu.connectra.connectra_backend.dtos.UserAuthResponseDTO;
+import uwu.connectra.connectra_backend.dtos.UserLoginRequestDTO;
 import uwu.connectra.connectra_backend.dtos.UserRegisterRequestDTO;
 import uwu.connectra.connectra_backend.entities.*;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
@@ -15,6 +19,7 @@ public class AuthenticationService {
     PasswordEncoder passwordEncoder;
     StudentDetailsExtractorService studentDetailsExtractorService;
     JwtService jwtService;
+    AuthenticationManager authenticationManager;
 
     // USER REGISTRATION
     public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
@@ -64,8 +69,36 @@ public class AuthenticationService {
     }
 
     // USER LOGIN
+    public UserAuthResponseDTO loginUser(UserLoginRequestDTO request, HttpServletResponse httpServletResponse)
+    throws AuthenticationException
+    {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (AuthenticationException e) {
+            throw new RuntimeException(e);
+        }
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User with email " + request.getEmail() + " not found"));
+
+        return authResponse(user, httpServletResponse);
+    }
 
     // USER LOGOUT
+    public void logoutUser(HttpServletResponse httpServletResponse) {
+        // Invalidate the refresh token cookie
+        Cookie refreshTokenCookie = new Cookie("refreshToken", null);
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setPath("/");
+        // refreshTokenCookie.setSecure(true);
+        refreshTokenCookie.setMaxAge(0); // Delete the cookie
+        httpServletResponse.addCookie(refreshTokenCookie);
+    }
 
     // Auth response helper method
     private UserAuthResponseDTO authResponse(User savedUser, HttpServletResponse httpServletResponse) {
