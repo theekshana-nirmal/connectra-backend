@@ -15,6 +15,7 @@ public class StudentAuthResponseDTO {
     private String email;
     private String role;
     private String profilePhotoUrl;
+    private String studentId;
     private String degree;
     private int batch;
     private String accessToken;

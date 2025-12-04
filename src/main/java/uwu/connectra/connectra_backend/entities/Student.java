@@ -17,4 +17,7 @@ public class Student extends User {
 
     @Column(name = "batch")
     private int batch;
+
+    @Column(name = "student_id", unique = true)
+    private String studentId;
 }

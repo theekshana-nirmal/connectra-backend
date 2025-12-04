@@ -1,5 +1,6 @@
 package uwu.connectra.connectra_backend.entities;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -13,5 +14,6 @@ import lombok.Setter;
 @Setter
 @Table(name = "lecturers")
 public class Lecturer extends User{
-
+    @Column(name = "department")
+    private String department;
 }
