@@ -12,17 +12,9 @@ import lombok.Setter;
 @Entity
 public class Student extends User {
     //All other common fields are inherit from User class
-
     @Column(name = "degree")
     private String degree;
 
     @Column(name = "batch")
     private int batch;
-
-    @PrePersist // Set default role as STUDENT before saving to database
-    protected void onCreate() {
-        if (this.getRole() == null) {
-            this.setRole(Role.STUDENT);
-        }
-    }
 }

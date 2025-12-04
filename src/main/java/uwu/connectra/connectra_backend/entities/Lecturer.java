@@ -13,12 +13,5 @@ import lombok.Setter;
 @Setter
 @Table(name = "lecturers")
 public class Lecturer extends User{
-    //All other common fields are inherit from User class
 
-    @PrePersist  // Set default role as LECTURER before saving to database
-    protected void onCreate(){
-        if (this.getRole() == null){
-            this.setRole(Role.LECTURER);
-        }
-    }
 }
