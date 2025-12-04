@@ -9,15 +9,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class StudentAuthResponseDTO {
-    private String firstName;
-    private String lastName;
+public class UserAuthResponseDTO {
     private String email;
     private String role;
-    private String profilePhotoUrl;
-    private String studentId;
-    private String degree;
-    private int batch;
     private String accessToken;
     private long expiresIn;
 }
