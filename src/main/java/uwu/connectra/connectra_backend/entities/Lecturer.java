@@ -11,6 +11,4 @@ import lombok.Setter;
 @Setter
 @DiscriminatorValue("LECTURER")
 public class Lecturer extends User{
-    @Column(name = "department")
-    private String department;
 }
