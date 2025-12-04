@@ -27,7 +27,7 @@ public class AdminSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (!adminRepository.findByEmail(admin_email)) {
+        if (!adminRepository.existsByEmail(admin_email)) {
             String hashed_password = passwordEncoder.encode(admin_row_password);
 
             Admin adminUser = new Admin();
