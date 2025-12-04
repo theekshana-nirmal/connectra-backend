@@ -10,6 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
+@DiscriminatorValue("STUDENT")
 public class Student extends User {
     //All other common fields are inherit from User class
     @Column(name = "degree")
