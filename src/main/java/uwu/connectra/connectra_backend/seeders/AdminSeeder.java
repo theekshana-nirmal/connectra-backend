@@ -8,7 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import uwu.connectra.connectra_backend.entities.Admin;
 import uwu.connectra.connectra_backend.entities.Role;
-import uwu.connectra.connectra_backend.repositories.AdminRepository;
+import uwu.connectra.connectra_backend.repositories.UserRepository;
 
 // Create a default admin account in the database in the first time database start
 @Slf4j
@@ -16,7 +16,7 @@ import uwu.connectra.connectra_backend.repositories.AdminRepository;
 @RequiredArgsConstructor
 public class AdminSeeder implements CommandLineRunner {
 
-    private final AdminRepository adminRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${ADMIN_EMAIL}")
@@ -27,7 +27,7 @@ public class AdminSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (!adminRepository.existsByEmail(admin_email)) {
+        if (!userRepository.existsByEmail(admin_email)) {
             String hashed_password = passwordEncoder.encode(admin_row_password);
 
             Admin adminUser = new Admin();
@@ -37,7 +37,7 @@ public class AdminSeeder implements CommandLineRunner {
             adminUser.setHashedPassword(hashed_password);
             adminUser.setRole(Role.ADMIN);
 
-            adminRepository.save(adminUser);
+            userRepository.save(adminUser);
             log.info("✅ Default Admin account created!");
         } else {
             log.info("💻 Admin account already exists. Skipping seeding.");
