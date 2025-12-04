@@ -31,10 +31,10 @@ public class AdminSeeder implements CommandLineRunner {
             String hashed_password = passwordEncoder.encode(admin_row_password);
 
             Admin adminUser = new Admin();
-            adminUser.setFirst_name("Connectra");
-            adminUser.setLast_name("Admin");
+            adminUser.setFirstName("Connectra");
+            adminUser.setLastName("Admin");
             adminUser.setEmail(admin_email);
-            adminUser.setHashed_password(hashed_password);
+            adminUser.setHashedPassword(hashed_password);
             adminUser.setRole(Role.ADMIN);
 
             adminRepository.save(adminUser);
