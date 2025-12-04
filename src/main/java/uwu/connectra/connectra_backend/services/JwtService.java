@@ -1,4 +1,4 @@
-package uwu.connectra.connectra_backend.security;
+package uwu.connectra.connectra_backend.services;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -7,12 +7,14 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 @Component
-public class JwtTokenProvider {
+public class JwtService {
 
     @Value("${JWT_SECRET}")
     private String jwtSecret;
@@ -22,7 +24,7 @@ public class JwtTokenProvider {
                 .subject(email)
                 .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 3600000))
+                .expiration(new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(30)))
                 .signWith(key())
                 .compact();
     }
@@ -31,7 +33,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(email)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 604800000))
+                .expiration(new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(30)))
                 .signWith(key())
                 .compact();
     }
@@ -52,7 +54,6 @@ public class JwtTokenProvider {
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
-
 
     public String extractRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
