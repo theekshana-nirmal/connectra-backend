@@ -100,6 +100,29 @@ public class AuthenticationService {
         httpServletResponse.addCookie(refreshTokenCookie);
     }
 
+    // REFRESH ACCESS TOKEN
+    public UserAuthResponseDTO refreshAccessToken(String refreshToken, HttpServletResponse httpServletResponse) {
+        // Validate Refresh Token
+        String userEmail = jwtService.extractEmail(refreshToken);
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User with email " + userEmail + " not found"));
+
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+            throw new RuntimeException("Invalid Refresh Token");
+        }
+
+        // Generate new tokens and return response
+        String newAccessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole().name());
+
+        return new UserAuthResponseDTO(
+                user.getEmail(),
+                newAccessToken,
+                user.getRole().name(),
+                TimeUnit.MINUTES.toMillis(30) // 30 minutes
+        );
+    }
+
     // Auth response helper method
     private UserAuthResponseDTO authResponse(User savedUser, HttpServletResponse httpServletResponse) {
         CustomUserDetails customUserDetails = new CustomUserDetails(savedUser);
