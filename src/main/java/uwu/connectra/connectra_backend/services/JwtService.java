@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -20,36 +21,37 @@ public class JwtService {
     private String jwtSecret;
 
     public String generateAccessToken(String email, String role) {
-        return Jwts.builder()
-                .subject(email)
-                .claim("role", role)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(30)))
-                .signWith(key())
-                .compact();
+        return Jwts.builder().subject(email).claim("role", role).issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(30))).signWith(key()).compact();
     }
 
     public String generateRefreshToken(String email) {
-        return Jwts.builder()
-                .subject(email)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(30)))
-                .signWith(key())
-                .compact();
+        return Jwts.builder().subject(email).issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(30))).signWith(key()).compact();
     }
 
-    public boolean validateToken(String token) {
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        return isTokenSignatureValid(token) && isTokenNotExpired(token) && isTokenEmailValid(token, userDetails);
+    }
+
+    // Check if the token has expired
+    private boolean isTokenNotExpired(String token) {
+        return !extractClaim(token, Claims::getExpiration).before(new Date());
+    }
+
+    // Validate the token's signature
+    private boolean isTokenSignatureValid(String token) {
         try {
-            Jwts.parser()
-                    .verifyWith(key())
-                    .build()
-                    .parseSignedClaims(token);
+            Jwts.parser().verifyWith(key()).build().parseSignedClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }
 
+    // Check if the token is valid for the given user details
+    private boolean isTokenEmailValid(String token, UserDetails userDetails) {
+        final String tokenEmail = extractEmail(token);
+        return (tokenEmail.equals(userDetails.getUsername()));
+    }
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -64,11 +66,7 @@ public class JwtService {
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = Jwts.parser()
-                .verifyWith(key())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        final Claims claims = Jwts.parser().verifyWith(key()).build().parseSignedClaims(token).getPayload();
         return claimsResolver.apply(claims);
     }
 }
