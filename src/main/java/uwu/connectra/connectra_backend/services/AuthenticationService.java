@@ -19,11 +19,11 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
-    UserRepository userRepository;
-    PasswordEncoder passwordEncoder;
-    StudentDetailsExtractorService studentDetailsExtractorService;
-    JwtService jwtService;
-    AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final StudentDetailsExtractorService studentDetailsExtractorService;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
 
     // USER REGISTRATION
     public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
@@ -79,9 +79,7 @@ public class AuthenticationService {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
-                            request.getPassword()
-                    )
-            );
+                            request.getPassword()));
         } catch (AuthenticationException e) {
             throw new RuntimeException(e);
         }
