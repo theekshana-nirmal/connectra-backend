@@ -15,7 +15,7 @@ import uwu.connectra.connectra_backend.services.AuthenticationService;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthenticationController {
-    AuthenticationService authenticationService;
+    private final AuthenticationService authenticationService;
 
     // User Registration
     @PostMapping("/register")
