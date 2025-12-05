@@ -5,13 +5,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import uwu.connectra.connectra_backend.dtos.UserAuthResponseDTO;
 import uwu.connectra.connectra_backend.dtos.UserLoginRequestDTO;
 import uwu.connectra.connectra_backend.dtos.UserRegisterRequestDTO;
 import uwu.connectra.connectra_backend.entities.*;
+import uwu.connectra.connectra_backend.exceptions.*;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
 
 import java.util.concurrent.TimeUnit;
@@ -29,7 +29,7 @@ public class AuthenticationService {
     public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
         // Check if user already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("User with email " + request.getEmail() + " already exists");
+            throw new UserAlreadyExistsException("User with email " + request.getEmail() + " already exists");
         }
 
         User user;
@@ -58,7 +58,7 @@ public class AuthenticationService {
                 user = new Admin();
                 user.setRole(Role.ADMIN);
             }
-            default -> throw new RuntimeException("Invalid Role Provided");
+            default -> throw new InvalidRoleException("Invalid role: " + request.getRole().name());
         }
 
         user.setFirstName(request.getFirstName());
@@ -74,18 +74,18 @@ public class AuthenticationService {
 
     // USER LOGIN
     public UserAuthResponseDTO loginUser(UserLoginRequestDTO request, HttpServletResponse httpServletResponse)
-            throws AuthenticationException {
+            throws UserCredentialsInvalidException {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
                             request.getPassword()));
-        } catch (AuthenticationException e) {
-            throw new RuntimeException(e);
+        } catch (UserCredentialsInvalidException e) {
+            throw new UserCredentialsInvalidException("Your email or password is incorrect");
         }
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User with email " + request.getEmail() + " not found"));
+                .orElseThrow(() -> new UserNotFoundException("User with email " + request.getEmail() + " not found"));
 
         return authResponse(user, httpServletResponse);
     }
@@ -110,7 +110,7 @@ public class AuthenticationService {
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
         if (!jwtService.isTokenValid(refreshToken, userDetails)) {
-            throw new RuntimeException("Invalid Refresh Token");
+            throw new InvalidTokenException("Refresh token is invalid or expired");
         }
 
         // Generate new tokens and return response
