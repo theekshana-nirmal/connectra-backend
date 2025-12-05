@@ -118,8 +118,8 @@ public class AuthenticationService {
 
         return new UserAuthResponseDTO(
                 user.getEmail(),
-                newAccessToken,
                 user.getRole().name(),
+                newAccessToken,
                 TimeUnit.MINUTES.toMillis(30) // 30 minutes
         );
     }
@@ -141,8 +141,8 @@ public class AuthenticationService {
 
         return new UserAuthResponseDTO(
                 savedUser.getEmail(),
-                accessToken,
                 savedUser.getRole().name(),
+                accessToken,
                 TimeUnit.MINUTES.toMillis(30) // 30 minutes
         );
     }
