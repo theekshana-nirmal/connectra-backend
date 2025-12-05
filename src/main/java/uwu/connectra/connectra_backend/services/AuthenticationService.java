@@ -2,10 +2,12 @@ package uwu.connectra.connectra_backend.services;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import uwu.connectra.connectra_backend.dtos.UserAuthResponseDTO;
 import uwu.connectra.connectra_backend.dtos.UserLoginRequestDTO;
 import uwu.connectra.connectra_backend.dtos.UserRegisterRequestDTO;
@@ -14,6 +16,8 @@ import uwu.connectra.connectra_backend.repositories.UserRepository;
 
 import java.util.concurrent.TimeUnit;
 
+@Service
+@RequiredArgsConstructor
 public class AuthenticationService {
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
@@ -70,8 +74,7 @@ public class AuthenticationService {
 
     // USER LOGIN
     public UserAuthResponseDTO loginUser(UserLoginRequestDTO request, HttpServletResponse httpServletResponse)
-    throws AuthenticationException
-    {
+            throws AuthenticationException {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
