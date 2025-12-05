@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/student")
 public class StudentController {
-    @PreAuthorize("hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
     @GetMapping("/dashboard")
     public String studentDashboard() {
         return "Welcome to the Student Dashboard!";
