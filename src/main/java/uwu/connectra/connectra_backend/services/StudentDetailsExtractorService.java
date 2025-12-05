@@ -1,7 +1,8 @@
 package uwu.connectra.connectra_backend.services;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
+@Service
 public class StudentDetailsExtractorService {
     // === GET STUDENT ID ===
     public String extractStudentId(String studentEmail) {
@@ -20,7 +21,8 @@ public class StudentDetailsExtractorService {
 
         // INPUT: Student email in the format like "bbst21004@std.uwu.ac.lk"
         // OUTPUT: "BBST"
-        // Rule: Before the last five digits, the preceding letters represent the degree code. and output should be in uppercase.
+        // Rule: Before the last five digits, the preceding letters represent the degree
+        // code. and output should be in uppercase.
 
         return null;
     }
