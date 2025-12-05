@@ -12,27 +12,30 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@MappedSuperclass
+@Entity
+@Table(name = "users")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @EntityListeners(AuditingEntityListener.class)
+@DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING)
 public abstract class User implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     @Column(name = "first_name")
-    private String first_name;
+    private String firstName;
 
     @Column(name = "last_name")
-    private String last_name;
+    private String lastName;
 
-    @Column(name = "email")
+    @Column(name = "email", unique = true)
     private String email;
 
     @Column(name = "hashed_password")
-    private String hashed_password;
+    private String hashedPassword;
 
     @Column(name = "profile_photo_url")
-    private String profile_photo_url = "https://placehold.co/100x100"; // Default URL
+    private String profilePhotoUrl = "https://placehold.co/100x100"; // Default URL
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false)
