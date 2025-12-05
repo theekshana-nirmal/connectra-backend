@@ -46,6 +46,8 @@ public class WebSecurityConfig {
                                         "/v3/api-docs/**",
                                         "/swagger-ui.html")
                                 .permitAll()
+                                .requestMatchers("/api/student/**").hasAnyRole("STUDENT","ADMIN")
+                                .requestMatchers("/api/lecturer/**").hasAnyRole("LECTURER","ADMIN")
                                 .anyRequest()
                                 .authenticated()
                 )
