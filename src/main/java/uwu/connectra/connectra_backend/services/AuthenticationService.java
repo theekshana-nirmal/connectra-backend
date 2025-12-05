@@ -27,6 +27,10 @@ public class AuthenticationService {
 
     // USER REGISTRATION
     public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
+        // Block 'ADMIN' role registration through this method
+        if (request.getRole() == Role.ADMIN) {
+            throw new InvalidRoleException("Cannot register user with role ADMIN through this method");
+        }
         // Check if user already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new UserAlreadyExistsException("User with email " + request.getEmail() + " already exists");
