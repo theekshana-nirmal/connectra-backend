@@ -2,16 +2,17 @@ package uwu.connectra.connectra_backend.exceptions;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import uwu.connectra.connectra_backend.dtos.ErrorResponseDTO;
 
+@RestControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseDTO> handleAllExceptions(Exception ex) {
+    public ResponseEntity<ErrorResponseDTO> handleAllExceptions(RuntimeException ex) {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 500,
                 ex.getMessage(),
-                System.currentTimeMillis()
-        );
+                System.currentTimeMillis());
         return ResponseEntity.status(500).body(errorResponse);
     }
 
@@ -21,8 +22,7 @@ public class GlobalExceptionHandler {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 400,
                 ex.getMessage(),
-                System.currentTimeMillis()
-        );
+                System.currentTimeMillis());
         return ResponseEntity.status(400).body(errorResponse);
     }
 
@@ -32,8 +32,7 @@ public class GlobalExceptionHandler {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 401,
                 ex.getMessage(),
-                System.currentTimeMillis()
-        );
+                System.currentTimeMillis());
         return ResponseEntity.status(401).body(errorResponse);
     }
 
@@ -43,8 +42,7 @@ public class GlobalExceptionHandler {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 404,
                 ex.getMessage(),
-                System.currentTimeMillis()
-        );
+                System.currentTimeMillis());
         return ResponseEntity.status(404).body(errorResponse);
     }
 
@@ -54,8 +52,7 @@ public class GlobalExceptionHandler {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 400,
                 ex.getMessage(),
-                System.currentTimeMillis()
-        );
+                System.currentTimeMillis());
         return ResponseEntity.status(403).body(errorResponse);
     }
 
@@ -65,8 +62,7 @@ public class GlobalExceptionHandler {
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 401,
                 ex.getMessage(),
-                System.currentTimeMillis()
-        );
+                System.currentTimeMillis());
         return ResponseEntity.status(401).body(errorResponse);
     }
 }

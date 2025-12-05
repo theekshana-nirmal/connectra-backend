@@ -84,7 +84,7 @@ public class AuthenticationService {
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
                             request.getPassword()));
-        } catch (UserCredentialsInvalidException e) {
+        } catch (Exception e) {
             throw new UserCredentialsInvalidException("Your email or password is incorrect");
         }
 
