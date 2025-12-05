@@ -25,6 +25,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class WebSecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsService userDetailsService;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -46,10 +48,15 @@ public class WebSecurityConfig {
                                         "/v3/api-docs/**",
                                         "/swagger-ui.html")
                                 .permitAll()
-                                .requestMatchers("/api/student/**").hasAnyRole("STUDENT","ADMIN")
-                                .requestMatchers("/api/lecturer/**").hasAnyRole("LECTURER","ADMIN")
+                                .requestMatchers("/api/student/**").hasAnyRole("STUDENT", "ADMIN")
+                                .requestMatchers("/api/lecturer/**").hasAnyRole("LECTURER", "ADMIN")
                                 .anyRequest()
                                 .authenticated()
+                )
+                .exceptionHandling(
+                        exception -> exception
+                                .authenticationEntryPoint(customAuthenticationEntryPoint)
+                                .accessDeniedHandler(customAccessDeniedHandler)
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
