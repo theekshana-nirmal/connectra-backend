@@ -29,7 +29,7 @@ public class AuthenticationService {
     public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
         // Block 'ADMIN' role registration through this method
         if (request.getRole() == Role.ADMIN) {
-            throw new InvalidRoleException("Cannot register user with role ADMIN through this method");
+            throw new InvalidRoleException("Cannot register user with role ADMIN");
         }
         // Check if user already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
