@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import uwu.connectra.connectra_backend.entities.Role;
 
 @AllArgsConstructor
 @NoArgsConstructor
