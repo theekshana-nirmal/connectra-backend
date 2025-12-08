@@ -1,5 +1,6 @@
 package uwu.connectra.connectra_backend.controllers;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,6 +10,7 @@ import uwu.connectra.connectra_backend.dtos.ApiResponse;
 
 @RestController
 @RequestMapping("/api/student")
+@Tag(name = "Student Controller", description = "Endpoints for student-specific operations")
 public class StudentController {
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
     @GetMapping("/dashboard")
