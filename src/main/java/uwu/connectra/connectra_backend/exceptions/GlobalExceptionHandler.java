@@ -1,68 +1,72 @@
 package uwu.connectra.connectra_backend.exceptions;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import uwu.connectra.connectra_backend.dtos.ErrorResponseDTO;
+import uwu.connectra.connectra_backend.dtos.ApiResponse;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseDTO> handleAllExceptions(RuntimeException ex) {
-        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
-                500,
-                ex.getMessage(),
-                System.currentTimeMillis());
-        return ResponseEntity.status(500).body(errorResponse);
+    public ResponseEntity<ApiResponse<String>> handleAllExceptions(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
     }
 
     // Handle User Already Exists Exception
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponseDTO> handleUserAlreadyExistsException(UserAlreadyExistsException ex) {
-        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
-                400,
-                ex.getMessage(),
-                System.currentTimeMillis());
-        return ResponseEntity.status(400).body(errorResponse);
+    public ResponseEntity<ApiResponse<String>> handleUserAlreadyExistsException(UserAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
     }
 
     // Handle User Credentials Invalid Exception
     @ExceptionHandler(UserCredentialsInvalidException.class)
-    public ResponseEntity<ErrorResponseDTO> handleUserCredentialsInvalidException(UserCredentialsInvalidException ex) {
-        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
-                401,
-                ex.getMessage(),
-                System.currentTimeMillis());
-        return ResponseEntity.status(401).body(errorResponse);
+    public ResponseEntity<ApiResponse<String>> handleUserCredentialsInvalidException(
+            UserCredentialsInvalidException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
     }
 
     // Handle User Not Found Exception
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorResponseDTO> handleUserNotFoundException(UserNotFoundException ex) {
-        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
-                404,
-                ex.getMessage(),
-                System.currentTimeMillis());
-        return ResponseEntity.status(404).body(errorResponse);
+    public ResponseEntity<ApiResponse<String>> handleUserNotFoundException(UserNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
     }
 
     // Invalid Role Exception
     @ExceptionHandler(InvalidRoleException.class)
-    public ResponseEntity<ErrorResponseDTO> handleInvalidRoleException(InvalidRoleException ex) {
-        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
-                400,
-                ex.getMessage(),
-                System.currentTimeMillis());
-        return ResponseEntity.status(403).body(errorResponse);
+    public ResponseEntity<ApiResponse<String>> handleInvalidRoleException(InvalidRoleException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
     }
 
     // Invalid Token Exception
     @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<ErrorResponseDTO> handleInvalidTokenException(InvalidTokenException ex) {
-        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
-                401,
-                ex.getMessage(),
-                System.currentTimeMillis());
-        return ResponseEntity.status(401).body(errorResponse);
+    public ResponseEntity<ApiResponse<String>> handleInvalidTokenException(InvalidTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
+
+    // Handle Validation Exceptions
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(
+            MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, "Validation Failed", errors));
     }
 }
