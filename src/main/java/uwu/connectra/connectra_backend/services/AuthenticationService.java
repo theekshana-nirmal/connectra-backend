@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import uwu.connectra.connectra_backend.dtos.UserAuthResponseDTO;
 import uwu.connectra.connectra_backend.dtos.UserLoginRequestDTO;
 import uwu.connectra.connectra_backend.dtos.UserRegisterRequestDTO;
+import uwu.connectra.connectra_backend.dtos.LecturerCreateResponseDTO;
 import uwu.connectra.connectra_backend.entities.*;
 import uwu.connectra.connectra_backend.exceptions.*;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
@@ -87,6 +88,33 @@ public class AuthenticationService {
         log.info("User registered successfully: {}", savedUser.getEmail());
 
         return authResponse(savedUser, httpServletResponse);
+    }
+
+    // LECTURER CREATION
+    public LecturerCreateResponseDTO createLecturer(UserRegisterRequestDTO request) {
+        log.info("Attempting to create lecturer account with email: {}", request.getEmail());
+
+        // Check if user already exists
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            log.warn("Creation failed: User with email {} already exists", request.getEmail());
+            throw new UserAlreadyExistsException("User with email " + request.getEmail() + " already exists");
+        }
+
+        Lecturer lecturer = new Lecturer();
+        lecturer.setRole(Role.LECTURER);
+        lecturer.setFirstName(request.getFirstName());
+        lecturer.setLastName(request.getLastName());
+        lecturer.setEmail(request.getEmail());
+        lecturer.setHashedPassword(passwordEncoder.encode(request.getPassword()));
+
+        // Save user to the database
+        User savedUser = userRepository.save(lecturer);
+        log.info("Lecturer created successfully: {}", savedUser.getEmail());
+
+        return new LecturerCreateResponseDTO(
+                savedUser.getFirstName(),
+                savedUser.getLastName(),
+                savedUser.getEmail());
     }
 
     // USER LOGIN
