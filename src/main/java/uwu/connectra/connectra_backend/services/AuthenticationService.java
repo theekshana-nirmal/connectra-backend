@@ -28,11 +28,7 @@ public class AuthenticationService {
     // USER REGISTRATION
     public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
         log.info("Attempting to register user with email: {}", request.getEmail());
-        // Block 'ADMIN' role registration through this method
-        if (Role.ADMIN.name().equalsIgnoreCase(request.getRole())) {
-            log.warn("Attempt to register ADMIN role blocked for email: {}", request.getEmail());
-            throw new InvalidRoleException("Cannot register user with role ADMIN");
-        }
+
         // Check if user already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             log.warn("Registration failed: User with email {} already exists", request.getEmail());
@@ -66,8 +62,12 @@ public class AuthenticationService {
                 user = student;
             }
             case LECTURER -> {
-                user = new Lecturer();
-                user.setRole(Role.LECTURER);
+                log.warn("Attempt to register LECTURER role blocked for email: {}", request.getEmail());
+                throw new InvalidRoleException("Cannot register user with role LECTURER");
+            }
+            case ADMIN -> {
+                log.warn("Attempt to register ADMIN role blocked for email: {}", request.getEmail());
+                throw new InvalidRoleException("Cannot register user with role ADMIN");
             }
             default -> {
                 log.error("Invalid role provided: {}", request.getRole());
