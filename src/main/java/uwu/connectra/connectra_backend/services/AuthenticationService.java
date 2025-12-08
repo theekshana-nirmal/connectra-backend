@@ -31,7 +31,7 @@ public class AuthenticationService {
     public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
         log.info("Attempting to register user with email: {}", request.getEmail());
         // Block 'ADMIN' role registration through this method
-        if (request.getRole() == Role.ADMIN) {
+        if (Role.ADMIN.name().equalsIgnoreCase(request.getRole())) {
             log.warn("Attempt to register ADMIN role blocked for email: {}", request.getEmail());
             throw new InvalidRoleException("Cannot register user with role ADMIN");
         }
@@ -43,8 +43,16 @@ public class AuthenticationService {
 
         User user;
 
-        switch (request.getRole().name()) {
-            case "STUDENT" -> {
+        Role role;
+        try {
+            role = Role.valueOf(request.getRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid role provided: {}", request.getRole());
+            throw new InvalidRoleException("Invalid role: " + request.getRole());
+        }
+
+        switch (role) {
+            case STUDENT -> {
                 Student student = new Student();
                 String studentEmail = request.getEmail();
 
@@ -59,17 +67,13 @@ public class AuthenticationService {
 
                 user = student;
             }
-            case "LECTURER" -> {
+            case LECTURER -> {
                 user = new Lecturer();
                 user.setRole(Role.LECTURER);
             }
-            case "ADMIN" -> {
-                user = new Admin();
-                user.setRole(Role.ADMIN);
-            }
             default -> {
-                log.error("Invalid role provided: {}", request.getRole().name());
-                throw new InvalidRoleException("Invalid role: " + request.getRole().name());
+                log.error("Invalid role provided: {}", request.getRole());
+                throw new InvalidRoleException("Invalid role: " + request.getRole());
             }
         }
 
