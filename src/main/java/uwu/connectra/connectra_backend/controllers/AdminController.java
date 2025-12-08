@@ -12,6 +12,7 @@ import uwu.connectra.connectra_backend.dtos.ApiResponse;
 import uwu.connectra.connectra_backend.dtos.LecturerCreateResponseDTO;
 import uwu.connectra.connectra_backend.dtos.UserRegisterRequestDTO;
 import uwu.connectra.connectra_backend.services.AuthenticationService;
+import uwu.connectra.connectra_backend.services.UserService;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -19,6 +20,7 @@ import uwu.connectra.connectra_backend.services.AuthenticationService;
 @Tag(name = "Admin Controller", description = "Endpoints for admin-specific operations")
 public class AdminController {
     private final AuthenticationService authenticationService;
+    private final UserService userService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/dashboard")
@@ -42,5 +44,15 @@ public class AdminController {
                                 response
                         )
                 );
+    }
+
+    // Delete User Account
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/users/{userId}")
+    @Operation(summary = "Delete a user account by user ID")
+    public ResponseEntity<ApiResponse<String>> deleteUserAccount(
+            @PathVariable Long userId) {
+        userService.deleteUserById(userId);
+        return ResponseEntity.noContent().build();
     }
 }
