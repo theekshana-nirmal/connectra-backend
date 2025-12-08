@@ -1,5 +1,7 @@
 package uwu.connectra.connectra_backend.controllers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,11 +18,13 @@ import uwu.connectra.connectra_backend.services.AuthenticationService;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Authentication Controller", description = "Endpoints for user authentication operations")
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
     // User Registration
     @PostMapping("/register")
+    @Operation(summary = "Register a new user")
     public ResponseEntity<ApiResponse<UserAuthResponseDTO>> register(
             @Valid @RequestBody UserRegisterRequestDTO request,
             HttpServletResponse httpServletResponse) {
@@ -31,6 +35,7 @@ public class AuthenticationController {
 
     // User Login
     @PostMapping("/login")
+    @Operation(summary = "User login")
     public ResponseEntity<ApiResponse<UserAuthResponseDTO>> login(
             @Valid @RequestBody UserLoginRequestDTO request,
             HttpServletResponse httpServletResponse) {
@@ -41,6 +46,7 @@ public class AuthenticationController {
 
     // Refresh Token
     @PostMapping("/refresh-token")
+    @Operation(summary = "Refresh 'access token' using refresh token")
     public ResponseEntity<ApiResponse<UserAuthResponseDTO>> refreshToken(
             @CookieValue("refreshToken") String refreshToken,
             HttpServletResponse httpServletResponse) {
@@ -51,6 +57,7 @@ public class AuthenticationController {
 
     // User Logout
     @PostMapping("/logout")
+    @Operation(summary = "User logout")
     public ResponseEntity<ApiResponse<LogoutResponseDTO>> logout(
             HttpServletResponse httpServletResponse) {
         authenticationService.logoutUser(httpServletResponse);
