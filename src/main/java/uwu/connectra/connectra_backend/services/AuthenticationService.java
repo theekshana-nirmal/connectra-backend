@@ -154,7 +154,7 @@ public class AuthenticationService {
     }
 
     // REFRESH ACCESS TOKEN
-    public UserAuthResponseDTO refreshAccessToken(String refreshToken, HttpServletResponse httpServletResponse) {
+    public UserAuthResponseDTO refreshAccessToken(String refreshToken) {
         // Validate Refresh Token
         String userEmail = jwtService.extractEmail(refreshToken);
         User user = userRepository.findByEmail(userEmail)
@@ -183,8 +183,6 @@ public class AuthenticationService {
 
     // Auth response helper method
     private UserAuthResponseDTO authResponse(User savedUser, HttpServletResponse httpServletResponse) {
-        CustomUserDetails customUserDetails = new CustomUserDetails(savedUser);
-
         String accessToken = jwtService.generateAccessToken(savedUser.getEmail(), savedUser.getRole().name());
         String refreshToken = jwtService.generateRefreshToken(savedUser.getEmail());
 

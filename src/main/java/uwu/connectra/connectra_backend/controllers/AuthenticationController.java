@@ -50,7 +50,7 @@ public class AuthenticationController {
     public ResponseEntity<ApiResponse<UserAuthResponseDTO>> refreshToken(
             @CookieValue("refreshToken") String refreshToken,
             HttpServletResponse httpServletResponse) {
-        UserAuthResponseDTO response = authenticationService.refreshAccessToken(refreshToken, httpServletResponse);
+        UserAuthResponseDTO response = authenticationService.refreshAccessToken(refreshToken);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(new ApiResponse<>(true, "Token refreshed successfully", response));
     }
