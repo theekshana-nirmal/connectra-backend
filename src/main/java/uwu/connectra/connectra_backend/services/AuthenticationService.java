@@ -3,6 +3,7 @@ package uwu.connectra.connectra_backend.services;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthenticationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -27,12 +29,15 @@ public class AuthenticationService {
 
     // USER REGISTRATION
     public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
+        log.info("Attempting to register user with email: {}", request.getEmail());
         // Block 'ADMIN' role registration through this method
         if (request.getRole() == Role.ADMIN) {
+            log.warn("Attempt to register ADMIN role blocked for email: {}", request.getEmail());
             throw new InvalidRoleException("Cannot register user with role ADMIN");
         }
         // Check if user already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            log.warn("Registration failed: User with email {} already exists", request.getEmail());
             throw new UserAlreadyExistsException("User with email " + request.getEmail() + " already exists");
         }
 
@@ -62,7 +67,10 @@ public class AuthenticationService {
                 user = new Admin();
                 user.setRole(Role.ADMIN);
             }
-            default -> throw new InvalidRoleException("Invalid role: " + request.getRole().name());
+            default -> {
+                log.error("Invalid role provided: {}", request.getRole().name());
+                throw new InvalidRoleException("Invalid role: " + request.getRole().name());
+            }
         }
 
         user.setFirstName(request.getFirstName());
@@ -72,6 +80,7 @@ public class AuthenticationService {
 
         // Save user to the database
         User savedUser = userRepository.save(user);
+        log.info("User registered successfully: {}", savedUser.getEmail());
 
         return authResponse(savedUser, httpServletResponse);
     }
@@ -79,18 +88,24 @@ public class AuthenticationService {
     // USER LOGIN
     public UserAuthResponseDTO loginUser(UserLoginRequestDTO request, HttpServletResponse httpServletResponse)
             throws UserCredentialsInvalidException {
+        log.info("Attempting login for user: {}", request.getEmail());
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getEmail(),
                             request.getPassword()));
         } catch (Exception e) {
+            log.warn("Login failed for user: {}. Invalid credentials.", request.getEmail());
             throw new UserCredentialsInvalidException("Your email or password is incorrect");
         }
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UserNotFoundException("User with email " + request.getEmail() + " not found"));
+                .orElseThrow(() -> {
+                    log.error("User not found after authentication: {}", request.getEmail());
+                    return new UserNotFoundException("User with email " + request.getEmail() + " not found");
+                });
 
+        log.info("User logged in successfully: {}", user.getEmail());
         return authResponse(user, httpServletResponse);
     }
 
@@ -103,6 +118,7 @@ public class AuthenticationService {
         // refreshTokenCookie.setSecure(true);
         refreshTokenCookie.setMaxAge(0); // Delete the cookie
         httpServletResponse.addCookie(refreshTokenCookie);
+        log.info("User logged out successfully");
     }
 
     // REFRESH ACCESS TOKEN
@@ -110,15 +126,20 @@ public class AuthenticationService {
         // Validate Refresh Token
         String userEmail = jwtService.extractEmail(refreshToken);
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User with email " + userEmail + " not found"));
+                .orElseThrow(() -> {
+                    log.warn("User not found during token refresh: {}", userEmail);
+                    return new RuntimeException("User with email " + userEmail + " not found");
+                });
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
         if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+            log.warn("Invalid refresh token for user: {}", userEmail);
             throw new InvalidTokenException("Refresh token is invalid or expired");
         }
 
         // Generate new tokens and return response
         String newAccessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole().name());
+        log.info("Access token refreshed for user: {}", userEmail);
 
         return new UserAuthResponseDTO(
                 user.getEmail(),
