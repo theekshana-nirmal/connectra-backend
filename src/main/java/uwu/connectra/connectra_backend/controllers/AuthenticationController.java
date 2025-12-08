@@ -48,8 +48,7 @@ public class AuthenticationController {
     @PostMapping("/refresh-token")
     @Operation(summary = "Refresh 'access token' using refresh token")
     public ResponseEntity<ApiResponse<UserAuthResponseDTO>> refreshToken(
-            @CookieValue("refreshToken") String refreshToken,
-            HttpServletResponse httpServletResponse) {
+            @CookieValue("refreshToken") String refreshToken) {
         UserAuthResponseDTO response = authenticationService.refreshAccessToken(refreshToken);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(new ApiResponse<>(true, "Token refreshed successfully", response));
