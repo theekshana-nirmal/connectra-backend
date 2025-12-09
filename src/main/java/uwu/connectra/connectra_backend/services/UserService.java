@@ -2,8 +2,11 @@ package uwu.connectra.connectra_backend.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import uwu.connectra.connectra_backend.dtos.LecturerResponseDTO;
+import uwu.connectra.connectra_backend.dtos.lecturer.LecturerResponseDTO;
+import uwu.connectra.connectra_backend.dtos.lecturer.LecturerUpdateRequestDTO;
+import uwu.connectra.connectra_backend.entities.Lecturer;
 import uwu.connectra.connectra_backend.entities.Role;
 import uwu.connectra.connectra_backend.exceptions.UserNotFoundException;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
@@ -15,6 +18,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    // GET USER BY ID
+    public LecturerResponseDTO getUserById(Long userId) {
+        log.info("Fetching user with ID: {}", userId);
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User with ID {} not found", userId);
+                    return new UserNotFoundException("User with ID " + userId + " not found");
+                });
+        log.info("User with ID {} found: {}", userId, user.getEmail());
+        return new LecturerResponseDTO(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail()
+        );
+    }
 
     // DELETE USER BY ID
     public void deleteUserById(Long userId) {
@@ -27,6 +47,7 @@ public class UserService {
         log.info("User with ID {} deleted successfully", userId);
     }
 
+    // === LECTURER RELATED OPERATIONS ===
     // Return All Lecturers
     public List<LecturerResponseDTO> getAllLecturers() {
         log.info("Fetching all lecturers from the database");
@@ -39,5 +60,30 @@ public class UserService {
                         lecturer.getEmail()
                 ))
                 .toList();
+    }
+
+    // Update a Lecturer Account by ID
+    public LecturerResponseDTO updateLecturer(Long lecturerId, LecturerUpdateRequestDTO request) {
+        log.info("Updating lecturer with ID: {}", lecturerId);
+        Lecturer user = (Lecturer) userRepository.findById(lecturerId)
+                .orElseThrow(() -> {
+                    log.warn("Update failed: Lecturer with ID {} not found", lecturerId);
+                    return new UserNotFoundException("Lecturer with ID " + lecturerId + " not found");
+                });
+
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEmail(request.getEmail());
+        user.setHashedPassword(passwordEncoder.encode(request.getPassword()));
+
+        userRepository.save(user);
+        log.info("Lecturer with ID {} updated successfully", lecturerId);
+
+        return new LecturerResponseDTO(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail()
+        );
     }
 }
