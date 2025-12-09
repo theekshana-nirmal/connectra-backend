@@ -88,7 +88,7 @@ public class AuthenticationService {
     }
 
     // LECTURER CREATION
-    public LecturerCreateResponseDTO createLecturer(UserRegisterRequestDTO request) {
+    public LecturerResponseDTO createLecturer(UserRegisterRequestDTO request) {
         log.info("Attempting to create lecturer account with email: {}", request.getEmail());
 
         // Check if user already exists
@@ -108,7 +108,8 @@ public class AuthenticationService {
         User savedUser = userRepository.save(lecturer);
         log.info("Lecturer created successfully: {}", savedUser.getEmail());
 
-        return new LecturerCreateResponseDTO(
+        return new LecturerResponseDTO(
+                savedUser.getId(),
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
                 savedUser.getEmail());
