@@ -1,4 +1,4 @@
-package uwu.connectra.connectra_backend.dtos;
+package uwu.connectra.connectra_backend.dtos.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

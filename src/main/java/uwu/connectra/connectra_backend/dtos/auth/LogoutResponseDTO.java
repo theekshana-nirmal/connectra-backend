@@ -1,4 +1,4 @@
-package uwu.connectra.connectra_backend.dtos;
+package uwu.connectra.connectra_backend.dtos.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

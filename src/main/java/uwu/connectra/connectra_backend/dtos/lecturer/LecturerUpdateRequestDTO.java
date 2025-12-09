@@ -1,5 +1,6 @@
-package uwu.connectra.connectra_backend.dtos;
+package uwu.connectra.connectra_backend.dtos.lecturer;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -11,7 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class UserRegisterRequestDTO {
+public class LecturerUpdateRequestDTO {
     @NotBlank(message = "First name is required")
     private String firstName;
 
@@ -19,11 +20,9 @@ public class UserRegisterRequestDTO {
     private String lastName;
 
     @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+    @Email
     private String email;
 
-    @NotBlank(message = "Password is required")
+    @Nullable
     private String password;
-
-    private String role;
 }

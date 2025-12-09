@@ -9,10 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
-import uwu.connectra.connectra_backend.dtos.LogoutResponseDTO;
-import uwu.connectra.connectra_backend.dtos.UserAuthResponseDTO;
-import uwu.connectra.connectra_backend.dtos.UserLoginRequestDTO;
-import uwu.connectra.connectra_backend.dtos.UserRegisterRequestDTO;
+import uwu.connectra.connectra_backend.dtos.auth.LogoutResponseDTO;
+import uwu.connectra.connectra_backend.dtos.auth.UserAuthResponseDTO;
+import uwu.connectra.connectra_backend.dtos.auth.UserLoginRequestDTO;
+import uwu.connectra.connectra_backend.dtos.auth.UserRegisterRequestDTO;
 import uwu.connectra.connectra_backend.services.AuthenticationService;
 
 @RestController

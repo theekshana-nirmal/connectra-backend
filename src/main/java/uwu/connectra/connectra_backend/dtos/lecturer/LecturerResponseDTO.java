@@ -1,4 +1,4 @@
-package uwu.connectra.connectra_backend.dtos;
+package uwu.connectra.connectra_backend.dtos.lecturer;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,9 +9,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class UserAuthResponseDTO {
+public class LecturerResponseDTO {
+    private Long id;
+    private String firstName;
+    private String lastName;
     private String email;
-    private String role;
-    private String accessToken;
-    private long expiresIn;
 }
