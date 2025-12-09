@@ -9,10 +9,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
-import uwu.connectra.connectra_backend.dtos.LecturerCreateResponseDTO;
+import uwu.connectra.connectra_backend.dtos.LecturerResponseDTO;
 import uwu.connectra.connectra_backend.dtos.UserRegisterRequestDTO;
 import uwu.connectra.connectra_backend.services.AuthenticationService;
 import uwu.connectra.connectra_backend.services.UserService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -28,15 +30,26 @@ public class AdminController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Welcome to the Admin Dashboard!", null));
     }
 
+    // === USER MANAGEMENT ===
+    // Delete User Account
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/users/{userId}")
+    @Operation(summary = "Delete a user account by user ID")
+    public ResponseEntity<ApiResponse<String>> deleteUserAccount(
+            @PathVariable Long userId) {
+        userService.deleteUserById(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     // === LECTURER ACCOUNT MANAGEMENT ===
     // Create Lecturer Account
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/lecturers")
     @Operation(summary = "Create a new lecturer account")
-    public ResponseEntity<ApiResponse<LecturerCreateResponseDTO>> createLecturerAccount(
+    public ResponseEntity<ApiResponse<LecturerResponseDTO>> createLecturerAccount(
             @Validated @RequestBody UserRegisterRequestDTO request) {
         // Logic to create a lecturer account
-        LecturerCreateResponseDTO response = authenticationService.createLecturer(request);
+        LecturerResponseDTO response = authenticationService.createLecturer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>(
                                 true,
@@ -46,13 +59,16 @@ public class AdminController {
                 );
     }
 
-    // Delete User Account
+    // Get all lecturers
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/users/{userId}")
-    @Operation(summary = "Delete a user account by user ID")
-    public ResponseEntity<ApiResponse<String>> deleteUserAccount(
-            @PathVariable Long userId) {
-        userService.deleteUserById(userId);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/lecturers")
+    @Operation(summary = "Get all lecturer accounts")
+    public ResponseEntity<ApiResponse<List<LecturerResponseDTO>>> getAllLecturers() {
+        var lecturers = userService.getAllLecturers();
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Lecturer accounts retrieved successfully.",
+                lecturers
+        ));
     }
 }
