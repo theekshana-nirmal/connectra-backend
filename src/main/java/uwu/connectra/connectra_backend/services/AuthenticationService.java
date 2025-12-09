@@ -53,11 +53,11 @@ public class AuthenticationService {
                 Student student = new Student();
                 String studentEmail = request.getEmail();
 
-                String studentId = studentDetailsExtractorService.extractStudentId(studentEmail);
+                String studentRegistrationId = studentDetailsExtractorService.extractStudentId(studentEmail);
                 String degree = studentDetailsExtractorService.extractDegree(studentEmail);
                 int batch = studentDetailsExtractorService.extractBatch(studentEmail);
 
-                student.setStudentId(studentId);
+                student.setStudentId(studentRegistrationId);
                 student.setDegree(degree);
                 student.setBatch(batch);
                 student.setRole(Role.STUDENT);
@@ -78,10 +78,10 @@ public class AuthenticationService {
             }
         }
 
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
-        user.setHashedPassword(passwordEncoder.encode(request.getPassword()));
+        user.setFirstName(request.getFirstName().trim());
+        user.setLastName(request.getLastName().trim());
+        user.setEmail(request.getEmail().trim());
+        user.setHashedPassword(passwordEncoder.encode(request.getPassword().trim()));
 
         // Save user to the database
         User savedUser = userRepository.save(user);
@@ -102,10 +102,10 @@ public class AuthenticationService {
 
         Lecturer lecturer = new Lecturer();
         lecturer.setRole(Role.LECTURER);
-        lecturer.setFirstName(request.getFirstName());
-        lecturer.setLastName(request.getLastName());
-        lecturer.setEmail(request.getEmail());
-        lecturer.setHashedPassword(passwordEncoder.encode(request.getPassword()));
+        lecturer.setFirstName(request.getFirstName().trim());
+        lecturer.setLastName(request.getLastName().trim());
+        lecturer.setEmail(request.getEmail().trim());
+        lecturer.setHashedPassword(passwordEncoder.encode(request.getPassword().trim()));
 
         // Save user to the database
         User savedUser = userRepository.save(lecturer);
