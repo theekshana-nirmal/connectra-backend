@@ -9,8 +9,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
-import uwu.connectra.connectra_backend.dtos.LecturerResponseDTO;
-import uwu.connectra.connectra_backend.dtos.UserRegisterRequestDTO;
+import uwu.connectra.connectra_backend.dtos.lecturer.LecturerResponseDTO;
+import uwu.connectra.connectra_backend.dtos.auth.UserRegisterRequestDTO;
+import uwu.connectra.connectra_backend.dtos.lecturer.LecturerUpdateRequestDTO;
 import uwu.connectra.connectra_backend.services.AuthenticationService;
 import uwu.connectra.connectra_backend.services.UserService;
 
@@ -36,7 +37,6 @@ public class LecturerController {
     @Operation(summary = "Create a new lecturer account")
     public ResponseEntity<ApiResponse<LecturerResponseDTO>> createLecturerAccount(
             @Validated @RequestBody UserRegisterRequestDTO request) {
-        // Logic to create a lecturer account
         LecturerResponseDTO response = authenticationService.createLecturer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>(
@@ -57,6 +57,35 @@ public class LecturerController {
                 true,
                 "Lecturer accounts retrieved successfully.",
                 lecturers
+        ));
+    }
+
+    // Get lecturer by ID
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{lecturerId}")
+    @Operation(summary = "Get a lecturer account by ID")
+    public ResponseEntity<ApiResponse<LecturerResponseDTO>> getLecturerById(
+            @PathVariable Long lecturerId) {
+        var lecturer = userService.getUserById(lecturerId);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Lecturer account retrieved successfully.",
+                lecturer
+        ));
+    }
+
+    // Update lecturer by ID
+    @PreAuthorize("hasAnyRole('ADMIN', 'LECTURER')")
+    @PutMapping("/{lecturerId}")
+    @Operation(summary = "Update a lecturer account by ID")
+    public ResponseEntity<ApiResponse<LecturerResponseDTO>> updateLecturerById(
+            @PathVariable Long lecturerId,
+            @Validated @RequestBody LecturerUpdateRequestDTO request) {
+        var updatedLecturer = userService.updateLecturer(lecturerId, request);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Lecturer account updated successfully.",
+                updatedLecturer
         ));
     }
 }
