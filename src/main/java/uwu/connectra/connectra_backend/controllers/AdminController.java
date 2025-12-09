@@ -7,17 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
-import uwu.connectra.connectra_backend.services.AuthenticationService;
 import uwu.connectra.connectra_backend.services.UserService;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 @Tag(name = "Admin Controller", description = "Endpoints for admin-specific operations")
 public class AdminController {
-    private final AuthenticationService authenticationService;
     private final UserService userService;
 
     @PreAuthorize("hasRole('ADMIN')")
