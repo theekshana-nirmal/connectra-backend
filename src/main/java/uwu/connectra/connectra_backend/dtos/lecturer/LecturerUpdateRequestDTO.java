@@ -1,5 +1,6 @@
 package uwu.connectra.connectra_backend.dtos.lecturer;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,6 @@ public class LecturerUpdateRequestDTO {
     @Email
     private String email;
 
-    @NotBlank(message = "Password is required")
+    @Nullable
     private String password;
 }
