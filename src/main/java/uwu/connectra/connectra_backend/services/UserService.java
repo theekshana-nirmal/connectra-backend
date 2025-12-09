@@ -19,6 +19,7 @@ import java.util.List;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
     // GET USER BY ID
     public LecturerResponseDTO getUserById(Long userId) {
         log.info("Fetching user with ID: {}", userId);
@@ -71,10 +72,22 @@ public class UserService {
                     return new UserNotFoundException("Lecturer with ID " + lecturerId + " not found");
                 });
 
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
-        user.setHashedPassword(passwordEncoder.encode(request.getPassword()));
+        user.setFirstName(request.getFirstName().trim());
+        user.setLastName(request.getLastName().trim());
+
+        // Update email only if it's not already taken by another user
+        String newEmail = request.getEmail().trim();
+        if (userRepository.existsByEmailAndIdNot(newEmail, lecturerId)) {
+            log.warn("Update failed: Email {} is already in use by another account", newEmail);
+            throw new IllegalArgumentException("Email " + newEmail + " is already in use by another account");
+        }
+        user.setEmail(newEmail);
+
+        // Update password only if provided
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            log.info("Updating password for lecturer with ID: {}", lecturerId);
+            user.setHashedPassword(passwordEncoder.encode(request.getPassword().trim()));
+        }
 
         userRepository.save(user);
         log.info("Lecturer with ID {} updated successfully", lecturerId);
