@@ -4,37 +4,70 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class StudentDetailsExtractorService {
-    // === GET STUDENT ID ===
-    public String extractStudentId(String studentEmail) {
-        // TODO: Implement the logic to extract student ID from the email
 
-        // INPUT: Student email in the format like "ict22082@std.uwu.ac.lk"
-        // OUTPUT: "UWU/ICT/22/082"
-        // Rule: "UWU/{DEGREE}/{BATCH}/{INDEX}"
-
-        return null;
-    }
+    private static final String EMAIL_SUFFIX = "@std.uwu.ac.lk";
+    private static final int INDEX_LENGTH = 3;
+    private static final int BATCH_LENGTH = 2;
+    private static final int NUMERIC_SUFFIX_LENGTH = INDEX_LENGTH + BATCH_LENGTH;
 
     // === GET DEGREE ===
     public String extractDegree(String studentEmail) {
-        // TODO: Implement the logic to extract degree code from the email
+        validateEmail(studentEmail);
+        String userPart = getUserPart(studentEmail);
 
-        // INPUT: Student email in the format like "bbst21004@std.uwu.ac.lk"
-        // OUTPUT: "BBST"
-        // Rule: Before the last five digits, the preceding letters represent the degree
-        // code. and output should be in uppercase.
+        //everything before the batch and index
+        String degree = userPart.substring(0, userPart.length() - NUMERIC_SUFFIX_LENGTH);
+        return degree.toUpperCase();
 
-        return null;
+    }
+    // === GET STUDENT ID ===
+    public String extractStudentId(String studentEmail) {
+        validateEmail(studentEmail);
+        String userPart = getUserPart(studentEmail);
+
+        String degree = extractDegree(studentEmail);
+        String batch = userPart.substring(userPart.length() - NUMERIC_SUFFIX_LENGTH, userPart.length() - INDEX_LENGTH);
+        String index = userPart.substring(userPart.length() - INDEX_LENGTH);
+
+        //UWU/{DEGREE}/{BATCH}/{INDEX}
+        return String.format("UWU/%s/%s/%s", degree, batch, index);
     }
 
     // === GET BATCH YEAR ===
     public int extractBatch(String studentEmail) {
-        // TODO: Implement the logic to extract batch year from the email
+        validateEmail(studentEmail);
+        String userPart = getUserPart(studentEmail);
 
-        // INPUT: Student email in the format like "bet23103@std.uwu.ac.lk"
-        // OUTPUT: 23
-        // Rule: Before the last three digits, the two digits represent the batch year.
+        //  before the Index
+        int startIndex = userPart.length() - NUMERIC_SUFFIX_LENGTH;
+        int endIndex = userPart.length() - INDEX_LENGTH;
 
-        return 0;
+        String batchStr = userPart.substring(startIndex, endIndex);
+
+        try {
+            return Integer.parseInt(batchStr);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Unable to parse batch year from email: " + studentEmail);
+        }
+    }
+    private void validateEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email cannot be null or empty");
+        }
+
+        if (!email.endsWith(EMAIL_SUFFIX)) {
+            throw new IllegalArgumentException("Invalid email domain. Must end with " + EMAIL_SUFFIX);
+        }
+
+        // user part is long enough to contain degree (at least 1 char) + batch (2) + index (3)
+        String userPart = getUserPart(email);
+        if (userPart.length() <= NUMERIC_SUFFIX_LENGTH) {
+            throw new IllegalArgumentException("Email format invalid: User part too short to contain degree, batch, and index.");
+        }
+    }
+    private String getUserPart(String email) {
+        int atIndex = email.indexOf("@");
+        // Validation ensure @ exists because we checked endsWith suffix
+        return email.substring(0, atIndex);
     }
 }
