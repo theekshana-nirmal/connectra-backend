@@ -19,5 +19,5 @@ public class Student extends User {
     private int batch;
 
     @Column(name = "student_id", unique = true)
-    private String studentId;
+    private String studentId; // This is the enrollment number of the student (e.g., UWU/ICT/22/082)
 }
