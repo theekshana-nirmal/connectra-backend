@@ -20,12 +20,30 @@ public class JwtService {
     @Value("${JWT_SECRET}")
     private String jwtSecret;
 
+    @Value("${jwt.expiration.access-token}")
+    private long accessTokenExpirationMinutes;
+
+    @Value("${jwt.expiration.refresh-token}")
+    private long refreshTokenExpirationDays;
+
     public String generateAccessToken(String email, String role) {
-        return Jwts.builder().subject(email).claim("role", role).issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(30))).signWith(key()).compact();
+        return Jwts.builder()
+                .subject(email)
+                .claim("role", role)
+                .issuedAt(new Date())
+                .expiration(
+                        new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(accessTokenExpirationMinutes)))
+                .signWith(key())
+                .compact();
     }
 
     public String generateRefreshToken(String email) {
-        return Jwts.builder().subject(email).issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(30))).signWith(key()).compact();
+        return Jwts.builder()
+                .subject(email)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(refreshTokenExpirationDays)))
+                .signWith(key())
+                .compact();
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {

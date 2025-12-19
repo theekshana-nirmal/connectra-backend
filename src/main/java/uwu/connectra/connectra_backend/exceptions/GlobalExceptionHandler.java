@@ -69,4 +69,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(false, "Validation Failed", errors));
     }
+
+    // Handle InvalidMeetingTimeException
+    @ExceptionHandler(InvalidMeetingTimeException.class)
+    public ResponseEntity<ApiResponse<String>> handleInvalidMeetingTimeException(InvalidMeetingTimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
 }
