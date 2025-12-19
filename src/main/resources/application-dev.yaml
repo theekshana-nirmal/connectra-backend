@@ -11,5 +11,5 @@ springdoc:
 
 jwt:
   expiration:
-    access-token: 1440 # in minutes (dev: 24 hours for easier testing)
+    access-token: 43200 # in minutes (dev: 30 days for easier testing) -> 30 × 24 × 60 = 43200 minutes
     refresh-token: 30 # in days (30 days)
