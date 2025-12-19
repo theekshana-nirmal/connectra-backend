@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
+import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.services.MeetingService;
 
 import java.util.List;
@@ -66,7 +67,7 @@ public class MeetingController {
     @PreAuthorize("hasAnyRole('LECTURER')")
     @PutMapping("/{meetingId}")
     @Operation(summary = "Update meeting details by its ID")
-    public ResponseEntity<ApiResponse<MeetingResponseDTO>> updateMeetingById(@PathVariable String meetingId, @RequestBody @Validated CreateMeetingRequestDTO request) {
+    public ResponseEntity<ApiResponse<MeetingResponseDTO>> updateMeetingById(@PathVariable String meetingId, @RequestBody @Validated UpdateMeetingRequestDTO request) {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
                 true,
                 "Meeting updated successfully.",
