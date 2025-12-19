@@ -9,8 +9,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 @Setter
@@ -49,8 +47,4 @@ public abstract class User implements Serializable {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
-
-    // Relationships
-    @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL)
-    private List<Meeting> meetings = new ArrayList<>();
 }
