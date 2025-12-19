@@ -36,7 +36,7 @@ public class Meeting {
     @Column(name = "acctual_start_time")
     private LocalDateTime actualStartTime;
 
-    @Column(name = "acctual_end_time")
+    @Column(name = "actual_end_time")
     private LocalDateTime actualEndTime;
 
     @CreatedDate
