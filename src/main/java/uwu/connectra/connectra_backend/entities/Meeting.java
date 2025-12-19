@@ -33,10 +33,10 @@ public class Meeting {
     @Column(name = "scheduled_end_time", nullable = false)
     private LocalDateTime scheduledEndTime;
 
-    @Column(name = "acctual_start_time")
+    @Column(name = "actual_start_time")
     private LocalDateTime actualStartTime;
 
-    @Column(name = "acctual_end_time")
+    @Column(name = "actual_end_time")
     private LocalDateTime actualEndTime;
 
     @CreatedDate
