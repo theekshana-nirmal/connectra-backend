@@ -1,6 +1,5 @@
 package uwu.connectra.connectra_backend.services;
 
-import jakarta.security.auth.message.AuthException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -16,7 +15,6 @@ import uwu.connectra.connectra_backend.exceptions.UserNotFoundException;
 import uwu.connectra.connectra_backend.repositories.MeetingRepository;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
 
-import java.nio.file.AccessDeniedException;
 import java.util.UUID;
 
 @Service
