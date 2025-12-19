@@ -19,6 +19,11 @@ spring:
       name: ${SPRING_USER}
       password: ${SPRING_PASSWORD}
 
+jwt:
+  expiration:
+    access-token: 30 # in minutes (production: 30 minutes)
+    refresh-token: 30 # in days (30 days)
+
 # Production default
 springdoc:
   swagger-ui:

@@ -8,3 +8,8 @@ springdoc:
     enabled: true
   api-docs:
     enabled: true
+
+jwt:
+  expiration:
+    access-token: 1440 # in minutes (dev: 24 hours for easier testing)
+    refresh-token: 30 # in days (30 days)
