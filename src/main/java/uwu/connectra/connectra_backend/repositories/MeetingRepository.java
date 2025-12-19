@@ -10,8 +10,8 @@ import java.util.UUID;
 
 @Repository
 public interface MeetingRepository extends JpaRepository<Meeting, UUID> {
-    // Get meetings by its creator's user ID ordered by scheduled start time descending
-    List<Meeting> findAllByCreatedByIdOrderByScheduledStartTimeDesc(Long userId);
+    // Get meetings by its creator's email ordered by creation date descending
+    List<Meeting> findAllByCreatedByEmailOrderByCreatedAtDesc(String email);
 
     // Get meetings by target degree and target batch
     List<Meeting> findAllByTargetDegreeAndTargetBatch(String targetDegree, Integer targetBatch);

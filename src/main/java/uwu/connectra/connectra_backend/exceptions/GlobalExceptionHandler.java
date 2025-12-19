@@ -76,4 +76,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(false, ex.getMessage(), null));
     }
+
+    // Handle MeetingAlreadyEndedException
+    @ExceptionHandler(MeetingAlreadyEndedException.class)
+    public ResponseEntity<ApiResponse<String>> handleMeetingAlreadyEndedException(MeetingAlreadyEndedException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
+
+    // Handle UnauthorizedException
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiResponse<String>> handleUnauthorizedException(UnauthorizedException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
 }

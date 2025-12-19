@@ -7,14 +7,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
+import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.services.MeetingService;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
@@ -25,7 +25,7 @@ public class MeetingController {
 
     // Create Meeting
     @PostMapping
-    @PreAuthorize("hasAnyRole('LECTURER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER')")
     @Operation(summary = "Create a new meeting")
     public ResponseEntity<ApiResponse<MeetingResponseDTO>> createMeeting(@RequestBody @Validated CreateMeetingRequestDTO request) {
 
@@ -33,6 +33,59 @@ public class MeetingController {
                 true,
                 "Meeting created successfully.",
                 meetingService.createMeeting(request)
+        ));
+    }
+
+    // Get all Meetings (created by the authenticated lecturer)
+    @PreAuthorize("hasAnyRole('LECTURER', 'ADMIN')")
+    @GetMapping
+    @Operation(summary = "Get all meetings created by the authenticated lecturer")
+    public ResponseEntity<ApiResponse<List<MeetingResponseDTO>>> getAllMeetings() {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                        true,
+                        "Meetings retrieved successfully.",
+                        meetingService.getAllMeetings()
+                )
+                )
+        );
+    }
+
+    // Get Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @GetMapping("/{meetingId}")
+    @Operation(summary = "Get meeting details by its ID")
+    public ResponseEntity<ApiResponse<MeetingResponseDTO>> getMeetingById(@PathVariable String meetingId) {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                true,
+                "Meeting retrieved successfully.",
+                meetingService.getMeetingById(meetingId)
+        )
+        ));
+    }
+
+    // Update Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @PutMapping("/{meetingId}")
+    @Operation(summary = "Update meeting details by its ID")
+    public ResponseEntity<ApiResponse<MeetingResponseDTO>> updateMeetingById(@PathVariable String meetingId, @RequestBody @Validated UpdateMeetingRequestDTO request) {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                true,
+                "Meeting updated successfully.",
+                meetingService.updateMeetingById(meetingId, request)
+        )
+        ));
+    }
+
+    // Cancel Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @PutMapping("/{meetingId}/cancel")
+    @Operation(summary = "Cancel meeting by its ID")
+    public ResponseEntity<ApiResponse<MeetingResponseDTO>> cancelMeetingById(@PathVariable String meetingId) {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                true,
+                "Meeting canceled successfully.",
+                meetingService.cancelMeetingById(meetingId)
+        )
         ));
     }
 }
