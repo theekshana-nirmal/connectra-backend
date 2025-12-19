@@ -27,14 +27,9 @@ public class MeetingService {
 
     // CREATE A MEETING
     @Transactional
-    public MeetingResponseDTO createMeeting(CreateMeetingRequestDTO request) throws AccessDeniedException {
+    public MeetingResponseDTO createMeeting(CreateMeetingRequestDTO request) {
         // Get currently authenticated user (the lecturer creating the meeting)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // Check if the user is authenticated
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new AccessDeniedException("User is not authenticated");
-        }
 
         String lecturerEmail = authentication.getName(); // Gets the email from UserDetails
 
