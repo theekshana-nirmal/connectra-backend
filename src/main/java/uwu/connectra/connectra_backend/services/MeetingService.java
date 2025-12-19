@@ -7,10 +7,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
+import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.entities.Lecturer;
 import uwu.connectra.connectra_backend.entities.Meeting;
 import uwu.connectra.connectra_backend.entities.MeetingStatus;
 import uwu.connectra.connectra_backend.exceptions.InvalidMeetingTimeException;
+import uwu.connectra.connectra_backend.exceptions.MeetingAlreadyEndedException;
+import uwu.connectra.connectra_backend.exceptions.UnauthorizedException;
 import uwu.connectra.connectra_backend.exceptions.UserNotFoundException;
 import uwu.connectra.connectra_backend.repositories.MeetingRepository;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
@@ -78,7 +81,7 @@ public class MeetingService {
     }
 
     // UPDATE MEETING BY ITS ID
-    public MeetingResponseDTO updateMeetingById(String meetingId, CreateMeetingRequestDTO request) {
+    public MeetingResponseDTO updateMeetingById(String meetingId, UpdateMeetingRequestDTO request) {
         // Get currently authenticated user (the lecturer creating the meeting)
         Lecturer currentLecturer = getCurrentLecturer();
 
@@ -88,12 +91,12 @@ public class MeetingService {
 
         // Check if the current lecturer is the creator of the meeting
         if (meeting.getCreatedBy().getId() != currentLecturer.getId()) {
-            throw new RuntimeException("You are not authorized to update this meeting.");
+            throw new UnauthorizedException("You are not authorized to update this meeting.");
         }
 
         // If the meeting status is Ended, it cannot be updated
         if (meeting.getStatus() == MeetingStatus.ENDED) {
-            throw new RuntimeException("Cannot update a meeting that has already ended.");
+            throw new MeetingAlreadyEndedException("Cannot update a meeting that has already ended.");
         }
 
         // Check if the scheduled end time is after the scheduled start time
