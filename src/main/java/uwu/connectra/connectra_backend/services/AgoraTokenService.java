@@ -27,7 +27,7 @@ public class AgoraTokenService {
         // Get currently authenticated user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getName();
-        User user = null;
+        User user;
         try {
             user = userRepository.findByEmail(userEmail).orElseThrow();
             log.info("Authenticated user found: {}", userEmail);
@@ -45,7 +45,7 @@ public class AgoraTokenService {
         int expirationTimestamp = currentTimestamp + tokenExpireTimeInSeconds;
 
         // Generate the token using Agora's RtcTokenBuilder2
-        String token = null;
+        String token;
         try {
             token = tokenBuilder.buildTokenWithUid(
                     agoraConfig.getAppId(),
@@ -69,7 +69,7 @@ public class AgoraTokenService {
         responseDTO.setUId(uid);
         responseDTO.setChannelName(request.getChannelName());
 
-        return new ApiResponse<AgoraTokenResponseDTO>(
+        return new ApiResponse<>(
                 true,
                 "Agora RTC token generated successfully",
                 responseDTO
