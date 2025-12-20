@@ -28,7 +28,7 @@ jwt:
 agora:
   app-id: ${AGORA_APP_ID}
   app-certificate: ${AGORA_APP_CERTIFICATE}
-  token-expire-time: 3600 # in seconds (1 hour)
+  token-expire-time: 28800 # in seconds (8 hour)
 
 # Production default
 springdoc:
