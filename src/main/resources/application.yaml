@@ -11,7 +11,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    #database-platform: org.hibernate.dialect.PostgreSQLDialect
+    #database-platform: org.hibernate.dialect.PostgresSQLDialect
     open-in-view: false # Disabled DB queries run while returning JSON
 
   security:
@@ -23,6 +23,12 @@ jwt:
   expiration:
     access-token: 30 # in minutes (production: 30 minutes)
     refresh-token: 30 # in days (30 days)
+
+# Agora configuration
+agora:
+  app-id: ${AGORA_APP_ID}
+  app-certificate: ${AGORA_APP_CERTIFICATE}
+  token-expire-time: 3600 # in seconds (1 hour)
 
 # Production default
 springdoc:
@@ -36,10 +42,10 @@ server:
   compression:
     enabled: true
     mime-types:
-    - application/json,
-    - application/xml,
-    - text/html,text/xml,
-    - text/plain,text/css,
-    - text/javascript,
-    - application/javascript
+      - application/json,
+      - application/xml,
+      - text/html,text/xml,
+      - text/plain,text/css,
+      - text/javascript,
+      - application/javascript
     min-response-size: 1024 # in bytes
