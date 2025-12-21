@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import uwu.connectra.connectra_backend.dtos.AgoraTokenResponseDTO;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
@@ -87,5 +88,19 @@ public class MeetingController {
                 meetingService.cancelMeetingById(meetingId)
         )
         ));
+    }
+
+    // Join Meeting by its ID (Generate Agora Token)
+    @PreAuthorize("hasAnyRole('LECTURER', 'STUDENT')")
+    @PostMapping("/{meetingId}/join")
+    @Operation(summary = "Generate Agora token to join meeting by its ID")
+    public ResponseEntity<ApiResponse<AgoraTokenResponseDTO>> joinMeetingById(@PathVariable String meetingId) {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                        true,
+                        "Joined meeting successfully.",
+                        meetingService.joinMeeting(meetingId)
+                )
+                )
+        );
     }
 }
