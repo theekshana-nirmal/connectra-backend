@@ -10,6 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class AgoraTokenResponseDTO {
+    private String meetingId;
     private String agoraToken;
     private String appId;
     private int uId;
