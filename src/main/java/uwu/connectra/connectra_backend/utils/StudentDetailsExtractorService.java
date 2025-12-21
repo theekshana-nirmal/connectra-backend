@@ -1,8 +1,8 @@
-package uwu.connectra.connectra_backend.services;
+package uwu.connectra.connectra_backend.utils;
 
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
 public class StudentDetailsExtractorService {
 
     private static final String EMAIL_SUFFIX = "@std.uwu.ac.lk";

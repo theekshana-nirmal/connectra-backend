@@ -15,6 +15,7 @@ import uwu.connectra.connectra_backend.dtos.lecturer.LecturerResponseDTO;
 import uwu.connectra.connectra_backend.entities.*;
 import uwu.connectra.connectra_backend.exceptions.*;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
+import uwu.connectra.connectra_backend.utils.StudentDetailsExtractorService;
 
 import java.util.concurrent.TimeUnit;
 
@@ -72,10 +73,7 @@ public class AuthenticationService {
                 log.warn("Attempt to register ADMIN role blocked for email: {}", request.getEmail());
                 throw new InvalidRoleException("Cannot register user with role ADMIN");
             }
-            default -> {
-                log.error("Invalid role provided: {}", request.getRole());
-                throw new InvalidRoleException("Invalid role: " + request.getRole());
-            }
+            default -> throw new AssertionError("Unexpected role: " + role);
         }
 
         user.setFirstName(request.getFirstName().trim());
