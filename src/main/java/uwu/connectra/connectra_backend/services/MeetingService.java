@@ -13,7 +13,7 @@ import uwu.connectra.connectra_backend.exceptions.InvalidMeetingTimeException;
 import uwu.connectra.connectra_backend.exceptions.MeetingAlreadyEndedException;
 import uwu.connectra.connectra_backend.exceptions.UnauthorizedException;
 import uwu.connectra.connectra_backend.repositories.MeetingRepository;
-import uwu.connectra.connectra_backend.util.CurrentUserProvider;
+import uwu.connectra.connectra_backend.utils.CurrentUserProvider;
 
 import java.util.List;
 import java.util.UUID;

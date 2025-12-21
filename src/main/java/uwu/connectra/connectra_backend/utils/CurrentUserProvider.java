@@ -1,4 +1,4 @@
-package uwu.connectra.connectra_backend.util;
+package uwu.connectra.connectra_backend.utils;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
