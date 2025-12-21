@@ -3,38 +3,30 @@ package uwu.connectra.connectra_backend.services;
 import io.agora.media.RtcTokenBuilder2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import uwu.connectra.connectra_backend.config.AgoraConfig;
 import uwu.connectra.connectra_backend.dtos.AgoraTokenRequestDTO;
 import uwu.connectra.connectra_backend.dtos.AgoraTokenResponseDTO;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
 import uwu.connectra.connectra_backend.entities.User;
-import uwu.connectra.connectra_backend.repositories.UserRepository;
+import uwu.connectra.connectra_backend.repositories.MeetingRepository;
+import uwu.connectra.connectra_backend.utils.CurrentUserProvider;
 
 @RequiredArgsConstructor
 @Service
 @Slf4j
 public class AgoraTokenService {
     private final AgoraConfig agoraConfig;
-    private final UserRepository userRepository;
+    private final MeetingRepository meetingRepository;
+    private final CurrentUserProvider currentUserProvider;
 
     RtcTokenBuilder2 tokenBuilder = new RtcTokenBuilder2();
 
     // Generates tokens for specific channel names and user IDs
     public ApiResponse<AgoraTokenResponseDTO> generateAgoraRtcToken(AgoraTokenRequestDTO request) {
         // Get currently authenticated user
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userEmail = authentication.getName();
-        User user;
-        try {
-            user = userRepository.findByEmail(userEmail).orElseThrow();
-            log.info("Authenticated user found: {}", userEmail);
-        } catch (Exception e) {
-            log.error("Authenticated user not found: {}", userEmail, e);
-            throw new RuntimeException("Authenticated user not found");
-        }
+        User user = currentUserProvider.getCurrentUser();
+        log.info("Authenticated user found: {}", user.getEmail());
 
         // Mapping authenticated user's ID to an integer UID for Agora
         int uid = (int) user.getId();
@@ -72,7 +64,6 @@ public class AgoraTokenService {
         return new ApiResponse<>(
                 true,
                 "Agora RTC token generated successfully",
-                responseDTO
-        );
+                responseDTO);
     }
 }
