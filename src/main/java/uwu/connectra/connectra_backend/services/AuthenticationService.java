@@ -15,7 +15,7 @@ import uwu.connectra.connectra_backend.dtos.lecturer.LecturerResponseDTO;
 import uwu.connectra.connectra_backend.entities.*;
 import uwu.connectra.connectra_backend.exceptions.*;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
-import uwu.connectra.connectra_backend.utils.StudentDetailsExtractorService;
+import uwu.connectra.connectra_backend.utils.StudentDetailsExtractor;
 
 import java.util.concurrent.TimeUnit;
 
@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 public class AuthenticationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final StudentDetailsExtractorService studentDetailsExtractorService;
+    private final StudentDetailsExtractor studentDetailsExtractor;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
@@ -54,9 +54,9 @@ public class AuthenticationService {
                 Student student = new Student();
                 String studentEmail = request.getEmail();
 
-                String studentRegistrationId = studentDetailsExtractorService.extractStudentId(studentEmail);
-                String degree = studentDetailsExtractorService.extractDegree(studentEmail);
-                int batch = studentDetailsExtractorService.extractBatch(studentEmail);
+                String studentRegistrationId = studentDetailsExtractor.extractStudentId(studentEmail);
+                String degree = studentDetailsExtractor.extractDegree(studentEmail);
+                int batch = studentDetailsExtractor.extractBatch(studentEmail);
 
                 student.setStudentId(studentRegistrationId);
                 student.setDegree(degree);

@@ -3,7 +3,7 @@ package uwu.connectra.connectra_backend.utils;
 import org.springframework.stereotype.Component;
 
 @Component
-public class StudentDetailsExtractorService {
+public class StudentDetailsExtractor {
 
     private static final String EMAIL_SUFFIX = "@std.uwu.ac.lk";
     private static final int INDEX_LENGTH = 3;
