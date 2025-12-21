@@ -10,6 +10,22 @@ import uwu.connectra.connectra_backend.entities.User;
 import uwu.connectra.connectra_backend.exceptions.UserNotFoundException;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
 
+
+/**
+ * Utility component that provides access to information about the
+ * currently authenticated user in the system.
+ *
+ * <p>This class acts as a centralized helper for retrieving user-related
+ * data from the Spring Security context.</p>
+ *
+ * <p>Available methods:</p>
+ * <ul>
+ *     <li>{@link #getCurrentUserEmail()}</li>
+ *     <li>{@link #getCurrentUser()}</li>
+ *     <li>{@link #getCurrentUserRole()}</li>
+ *     <li>{@link #getCurrentUserAs(Class)}</li>
+ * </ul>
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -17,6 +33,7 @@ public class CurrentUserProvider {
 
     private final UserRepository userRepository;
 
+    // Get the email of the currently authenticated user
     public String getCurrentUserEmail() {
         Authentication authentication = getAuthentication();
         String email = authentication.getName();
@@ -24,6 +41,7 @@ public class CurrentUserProvider {
         return email;
     }
 
+    // Get the currently authenticated User entity from the database
     public User getCurrentUser() {
         String email = getCurrentUserEmail();
         User user = userRepository.findByEmail(email)
@@ -35,10 +53,12 @@ public class CurrentUserProvider {
         return user;
     }
 
+    // Get the role of the currently authenticated user
     public Role getCurrentUserRole() {
         return getCurrentUser().getRole();
     }
 
+    // Return the currently authenticated user but as the specified subclass type
     public <T extends User> T getCurrentUserAs(Class<T> type) {
         User user = getCurrentUser();
 
@@ -54,6 +74,7 @@ public class CurrentUserProvider {
         return type.cast(user);
     }
 
+    // Helper method to get the current Authentication object
     private Authentication getAuthentication() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
