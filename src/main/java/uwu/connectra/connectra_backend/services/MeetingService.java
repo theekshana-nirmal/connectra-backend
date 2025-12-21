@@ -18,8 +18,11 @@ import uwu.connectra.connectra_backend.exceptions.UserNotFoundException;
 import uwu.connectra.connectra_backend.repositories.MeetingRepository;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -177,5 +180,22 @@ public class MeetingService {
         String lecturerEmail = authentication.getName(); // Gets the email from UserDetails
 
         return (Lecturer) userRepository.findByEmail(lecturerEmail).orElseThrow(() -> new UserNotFoundException("Lecturer not found"));
+    }
+
+    public List<MeetingResponseDTO> getStudentMeetings(String degree, Integer batch) {
+        // 1. Fetch meetings based on Degree and Batch
+        List<Meeting> allGroupMeetings = meetingRepository.findAllByTargetDegreeAndTargetBatch(degree, batch);
+
+        return allGroupMeetings.stream()
+                // 2. Filter: Only keep SCHEDULED or LIVE meetings
+                .filter(meeting ->
+                        meeting.getStatus() == MeetingStatus.SCHEDULED ||
+                                meeting.getStatus() == MeetingStatus.LIVE
+                )
+                // 3. Sort: By scheduled start time (Ascending)
+                .sorted(Comparator.comparing(Meeting::getScheduledStartTime))
+                // 4. Map: Convert to DTO using existing helper, passing the meeting's creator
+                .map(meeting -> getMeetingResponseDTO(meeting, meeting.getCreatedBy()))
+                .collect(Collectors.toList());
     }
 }
