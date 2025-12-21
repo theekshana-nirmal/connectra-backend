@@ -39,7 +39,7 @@ public class MeetingController {
 
     // Get all Meetings (created by the authenticated lecturer)
     @PreAuthorize("hasAnyRole('LECTURER', 'ADMIN')")
-    @GetMapping
+    @GetMapping("/lecturer")
     @Operation(summary = "Get all meetings created by the authenticated lecturer")
     public ResponseEntity<ApiResponse<List<MeetingResponseDTO>>> getAllMeetings() {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
