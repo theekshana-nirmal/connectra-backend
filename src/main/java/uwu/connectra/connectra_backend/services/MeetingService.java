@@ -21,9 +21,11 @@ import uwu.connectra.connectra_backend.utils.AgoraTokenGenerator;
 import uwu.connectra.connectra_backend.utils.CurrentUserProvider;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -142,6 +144,25 @@ public class MeetingService {
         log.info("User joined meeting: {} with role: {}", meetingId, currentUserRole);
 
         return mapToAgoraTokenResponse(meeting, agoraToken);
+    }
+
+    // === NEW METHOD: GET STUDENT MEETINGS ===
+    @Transactional(readOnly = true)
+    public List<MeetingResponseDTO> getStudentMeetings(String degree, Integer batch) {
+        // 1. Fetch meetings based on Degree and Batch
+        List<Meeting> allGroupMeetings = meetingRepository.findAllByTargetDegreeAndTargetBatch(degree, batch);
+
+        return allGroupMeetings.stream()
+                // 2. Filter: Only keep SCHEDULED or LIVE meetings
+                .filter(meeting ->
+                        meeting.getStatus() == MeetingStatus.SCHEDULED ||
+                                meeting.getStatus() == MeetingStatus.LIVE
+                )
+                // 3. Sort: By scheduled start time (Ascending)
+                .sorted(Comparator.comparing(Meeting::getScheduledStartTime))
+                // 4. Map: Convert to DTO
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
     }
 
     // ==================== Private Helper Methods ====================
