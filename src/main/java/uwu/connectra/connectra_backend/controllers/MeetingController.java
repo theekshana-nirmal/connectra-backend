@@ -103,4 +103,17 @@ public class MeetingController {
                 )
         );
     }
+
+    // Stop Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @PutMapping("/{meetingId}/stop")
+    @Operation(summary = "Stop meeting by its ID")
+    public ResponseEntity<ApiResponse<MeetingResponseDTO>> stopMeeting(@PathVariable String meetingId) {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                true,
+                "Meeting stopped successfully.",
+                meetingService.stopMeeting(meetingId)
+        )
+        ));
+    }
 }
