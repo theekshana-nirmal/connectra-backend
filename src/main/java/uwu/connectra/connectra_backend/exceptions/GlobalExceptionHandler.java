@@ -90,4 +90,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ApiResponse<>(false, ex.getMessage(), null));
     }
+
+    // Handle MeetingNotFoundException
+    @ExceptionHandler(MeetingNotFoundException.class)
+    public ResponseEntity<ApiResponse<String>> handleMeetingNotFoundException(MeetingNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
+
+    // Handle MeetingCancelledException
+    @ExceptionHandler(MeetingCancelledException.class)
+    public ResponseEntity<ApiResponse<String>> handleMeetingCancelledException(MeetingCancelledException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
 }
