@@ -144,6 +144,31 @@ public class MeetingService {
         return mapToAgoraTokenResponse(meeting, agoraToken);
     }
 
+    // STOP MEETING BY ID
+    @Transactional
+    public MeetingResponseDTO stopMeeting(String meetingId) {
+        Meeting meeting = findMeetingById(meetingId);
+        Role currentUserRole = currentUserProvider.getCurrentUserRole();
+
+        if (currentUserRole != Role.LECTURER) {
+            throw new UnauthorizedException("Only lecturers can stop the meeting.");
+        }
+
+        Lecturer currentLecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
+
+        validateLecturerOwnership(meeting, currentLecturer);
+
+        validateMeetingIsLive(meeting);
+
+        meeting.setStatus(MeetingStatus.ENDED);
+        meeting.setActualEndTime(LocalDateTime.now());
+
+        Meeting stoppedMeeting = meetingRepository.save(meeting);
+        log.info("Meeting stopped: {} by lecturer: {}", stoppedMeeting.getMeetingId(), currentLecturer.getEmail());
+
+        return mapToResponseDTO(stoppedMeeting);
+    }
+
     // ==================== Private Helper Methods ====================
 
     // Automatically start meeting (set status to LIVE and set actual start time)
@@ -182,6 +207,21 @@ public class MeetingService {
         if (meeting.getStatus() == MeetingStatus.ENDED) {
             throw new MeetingAlreadyEndedException(
                     "Cannot modify a meeting that has already ended.");
+        }
+    }
+
+    // Validate that the meeting has been cancelled
+    private void validateMeetingNotCancelled(Meeting meeting) {
+        if (meeting.getStatus() == MeetingStatus.CANCELLED) {
+            throw new MeetingCancelledException(
+                    "Cannot modify a meeting that has been cancelled.");
+        }
+    }
+
+    // Validate that the meeting is live
+    private void validateMeetingIsLive(Meeting meeting) {
+        if (meeting.getStatus() != MeetingStatus.LIVE) {
+            throw new UnauthorizedException("This meeting is not live.");
         }
     }
 
