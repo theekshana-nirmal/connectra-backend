@@ -9,6 +9,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -74,4 +75,7 @@ public class Meeting {
     @ManyToOne
     @JoinColumn(name = "lecturer_id", nullable = false)
     private Lecturer createdBy;
+
+    @OneToMany(mappedBy = "meetingId", cascade = CascadeType.ALL)
+    private List<Attendance> attendances;
 }
