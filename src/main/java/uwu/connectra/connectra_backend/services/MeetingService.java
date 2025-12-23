@@ -181,6 +181,10 @@ public class MeetingService {
         meeting.setActualEndTime(LocalDateTime.now());
 
         Meeting stoppedMeeting = meetingRepository.save(meeting);
+
+        // Finalize all attendance records for the meeting
+        attendanceService.finalizeAttendanceForMeeting(stoppedMeeting);
+
         log.info("Meeting stopped: {} by lecturer: {}", stoppedMeeting.getMeetingId(), currentLecturer.getEmail());
 
         return mapToResponseDTO(stoppedMeeting);
@@ -195,8 +199,6 @@ public class MeetingService {
         meetingRepository.save(meeting);
         log.info("Meeting automatically started (LIVE): {}", meeting.getMeetingId());
     }
-
-
 
     // Validate that the scheduled end time is after the scheduled start time
     private void validateMeetingTimes(LocalDateTime startTime, LocalDateTime endTime) {
