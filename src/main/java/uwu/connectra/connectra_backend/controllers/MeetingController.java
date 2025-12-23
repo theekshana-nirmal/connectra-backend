@@ -10,6 +10,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.AgoraTokenResponseDTO;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
+import uwu.connectra.connectra_backend.dtos.AttendanceReportResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
@@ -130,4 +131,19 @@ public class MeetingController {
         )
         ));
     }
+
+    // ===== ATTENDANCE REPOTS ENDPOINTS =====
+    // Get Attendance Report for a Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @GetMapping("/{meetingId}/attendance")
+    @Operation(summary = "Get attendance report for a meeting by its ID")
+    public ResponseEntity<ApiResponse<AttendanceReportResponseDTO>> getAttendanceReport(@PathVariable String meetingId) {
+        AttendanceReportResponseDTO report = meetingService.generateAttendanceReport(meetingId);
+        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse<>(
+                true,
+                "Attendance report generated successfully.",
+                report
+        ));
+    }
+
 }
