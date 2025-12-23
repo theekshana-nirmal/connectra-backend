@@ -2,24 +2,30 @@ package uwu.connectra.connectra_backend.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import uwu.connectra.connectra_backend.dtos.StudentAttendanceDTO;
 import uwu.connectra.connectra_backend.entities.Attendance;
 import uwu.connectra.connectra_backend.entities.AttendanceStatus;
 import uwu.connectra.connectra_backend.entities.Meeting;
 import uwu.connectra.connectra_backend.entities.Student;
 import uwu.connectra.connectra_backend.exceptions.UnauthorizedException;
 import uwu.connectra.connectra_backend.repositories.AttendanceRepository;
+import uwu.connectra.connectra_backend.repositories.MeetingRepository;
 import uwu.connectra.connectra_backend.utils.CurrentUserProvider;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
     private final CurrentUserProvider currentUserProvider;
     private final AttendanceRepository attendanceRepository;
+    private final MeetingRepository meetingRepository;
 
     // ====== HELPER METHODS ===== //
     // Update student attendance on join
@@ -143,5 +149,48 @@ public class AttendanceService {
         } else {
             attendance.setAttendanceStatus(AttendanceStatus.ABSENT);
         }
+    }
+
+    // In your service class (e.g., AttendanceService or MeetingService)
+    public List<Student> getAttendedStudentsForMeeting(UUID meetingId) {
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
+
+        List<Attendance> attendances = attendanceRepository.findAllByMeeting(meeting);
+
+        // Extract students from attendance records
+        return attendances.stream()
+                .map(Attendance::getStudent)
+                .collect(Collectors.toList());
+    }
+
+    // Get students by attendance status for a specific meeting
+    public List<Student> getAttendanceStatusForStudentInMeeting(UUID meetingId, AttendanceStatus status) {
+        Meeting meeting = meetingRepository.findById(meetingId)
+                .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
+
+        List<Attendance> attendances = attendanceRepository.findAllByMeetingAndStatus(meeting, status);
+
+        return attendances.stream()
+                .map(Attendance::getStudent)
+                .collect(Collectors.toList());
+    }
+
+    // Map students to StudentAttendanceDTOs for a specific meeting
+    public List<StudentAttendanceDTO> mapStudentsToAttendanceDTOs(List<Student> students, Meeting meeting) {
+        return students.stream().map(student -> {
+            Attendance attendance = attendanceRepository.findByStudentAndMeeting(student, meeting)
+                    .orElse(null);
+
+            long durationMinutes = (attendance != null) ? attendance.getTotalDurationInMinutes() : 0;
+            String studentName = student.getFirstName() + " " + student.getLastName();
+
+            return new StudentAttendanceDTO(
+                    student.getStudentId(),
+                    studentName,
+                    (attendance != null) ? attendance.getAttendanceStatus() : AttendanceStatus.ABSENT,
+                    durationMinutes
+            );
+        }).collect(Collectors.toList());
     }
 }
