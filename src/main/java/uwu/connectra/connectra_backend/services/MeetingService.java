@@ -29,6 +29,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class MeetingService {
+    private final AttendanceService attendanceService;
     private final MeetingRepository meetingRepository;
     private final CurrentUserProvider currentUserProvider;
     private final AgoraTokenGenerator agoraTokenGenerator;
@@ -125,6 +126,7 @@ public class MeetingService {
 
         if (currentUserRole == Role.STUDENT) {
             validateStudentMeetingAccess(meeting);
+            attendanceService.recordStudentAttendanceOnJoin(meeting);
         } else if (currentUserRole == Role.LECTURER) {
             validateLecturerMeetingAccess(meeting);
 
@@ -142,6 +144,21 @@ public class MeetingService {
         log.info("User joined meeting: {} with role: {}", meetingId, currentUserRole);
 
         return mapToAgoraTokenResponse(meeting, agoraToken);
+    }
+
+    // LEAVE MEETING BY ID
+    @Transactional
+    public String leaveMeeting(String meetingId) {
+        Meeting meeting = findMeetingById(meetingId);
+        Role currentUserRole = currentUserProvider.getCurrentUserRole();
+
+        // If the user is a student, update their attendance record
+        if (currentUserRole == Role.STUDENT) {
+            attendanceService.recordStudentAttendanceOnLeave(meeting);
+        }
+
+        log.info("User left meeting: {} with role: {}", meetingId, currentUserRole);
+        return String.format("Left meeting %s successfully.", meetingId);
     }
 
     // STOP MEETING BY ID
@@ -179,6 +196,8 @@ public class MeetingService {
         log.info("Meeting automatically started (LIVE): {}", meeting.getMeetingId());
     }
 
+
+
     // Validate that the scheduled end time is after the scheduled start time
     private void validateMeetingTimes(LocalDateTime startTime, LocalDateTime endTime) {
         if (endTime.isBefore(startTime) || endTime.isEqual(startTime)) {
@@ -207,14 +226,6 @@ public class MeetingService {
         if (meeting.getStatus() == MeetingStatus.ENDED) {
             throw new MeetingAlreadyEndedException(
                     "Cannot modify a meeting that has already ended.");
-        }
-    }
-
-    // Validate that the meeting has been cancelled
-    private void validateMeetingNotCancelled(Meeting meeting) {
-        if (meeting.getStatus() == MeetingStatus.CANCELLED) {
-            throw new MeetingCancelledException(
-                    "Cannot modify a meeting that has been cancelled.");
         }
     }
 
