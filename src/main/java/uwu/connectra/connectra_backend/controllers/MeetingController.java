@@ -133,7 +133,7 @@ public class MeetingController {
     }
 
     // ===== ATTENDANCE REPOTS ENDPOINTS =====
-    // Get Attendance Report for a Meeting by its ID
+    // Get Attendance Report data for a Meeting by its ID
     @PreAuthorize("hasAnyRole('LECTURER')")
     @GetMapping("/{meetingId}/attendance")
     @Operation(summary = "Get attendance report for a meeting by its ID")
@@ -141,7 +141,7 @@ public class MeetingController {
         AttendanceReportResponseDTO report = meetingService.generateAttendanceReport(meetingId);
         return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse<>(
                 true,
-                "Attendance report generated successfully.",
+                "Attendance report data generated successfully.",
                 report
         ));
     }
