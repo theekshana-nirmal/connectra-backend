@@ -199,6 +199,7 @@ public class MeetingService {
     public AttendanceReportResponseDTO generateAttendanceReport(String meetingId) {
         Meeting meeting = findMeetingById(meetingId);
         validateLecturerCanAccessReport(meeting);
+        validateMeetingHasEnded(meeting);
 
         AttendanceData attendanceData = collectAttendanceData(meeting);
         return mapToAttendanceReportDTO(meeting, attendanceData);
@@ -238,8 +239,14 @@ public class MeetingService {
 
         List<Student> totalParticipatedStudents = attendanceService
                 .getAttendedStudentsForMeeting(meeting.getMeetingId());
+
+        List<String> participatedStudentIds = totalParticipatedStudents.stream()
+                .map(Student::getEmail)
+                .toList();
+
+        // Filter absent students by comparing IDs
         List<Student> absentStudents = targetStudents.stream()
-                .filter(student -> !totalParticipatedStudents.contains(student))
+                .filter(student -> !participatedStudentIds.contains(student.getEmail()))
                 .toList();
 
         return new AttendanceData(targetStudents, presentStudents, partiallyPresentStudents, absentStudents);
@@ -247,6 +254,9 @@ public class MeetingService {
 
     // Calculate meeting duration in minutes
     private long calculateMeetingDuration(LocalDateTime startTime, LocalDateTime endTime) {
+        if (startTime == null || endTime == null) {
+            return 0;
+        }
         return Duration.between(startTime, endTime).toMinutes();
     }
 
@@ -321,6 +331,14 @@ public class MeetingService {
         if (meeting.getStatus() == MeetingStatus.ENDED) {
             throw new MeetingAlreadyEndedException(
                     "Cannot modify a meeting that has already ended.");
+        }
+    }
+
+    // Validate that the meeting has ended (for attendance reports)
+    private void validateMeetingHasEnded(Meeting meeting) {
+        if (meeting.getStatus() != MeetingStatus.ENDED) {
+            throw new UnauthorizedException(
+                    "Attendance report can only be generated for meetings that have ended.");
         }
     }
 
