@@ -293,6 +293,8 @@ public class MeetingService {
                 attendanceService.mapStudentsToAttendanceDTOs(attendanceData.absentStudents(), meeting));
 
         return reportDTO;
+    }
+
     // === NEW METHOD: GET STUDENT MEETINGS ===
     @Transactional(readOnly = true)
     public List<MeetingResponseDTO> getStudentMeetings(String degree, Integer batch) {
