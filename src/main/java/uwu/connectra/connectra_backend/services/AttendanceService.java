@@ -12,6 +12,7 @@ import uwu.connectra.connectra_backend.utils.CurrentUserProvider;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
@@ -98,7 +99,7 @@ public class AttendanceService {
                 (attendance.getLeftAt() == null ||
                         attendance.getLeftAt().isBefore(attendance.getLastJoinedAt()))) {
             attendance.setLeftAt(meetingEndTime);
-            long duration = java.time.Duration.between(attendance.getLastJoinedAt(), meetingEndTime)
+            long duration = Duration.between(attendance.getLastJoinedAt(), meetingEndTime)
                     .toMinutes();
             attendance.setTotalDurationInMinutes(attendance.getTotalDurationInMinutes() + duration);
         }
@@ -115,7 +116,7 @@ public class AttendanceService {
                 : LocalDateTime.now(); // If meeting is still live, use current time
 
         // Calculate total meeting duration in minutes
-        long totalMeetingDuration = java.time.Duration.between(meetingStart, meetingEnd).toMinutes();
+        long totalMeetingDuration = Duration.between(meetingStart, meetingEnd).toMinutes();
 
         // Avoid division by zero
         if (totalMeetingDuration <= 0) {
