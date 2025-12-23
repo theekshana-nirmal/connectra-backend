@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @NoArgsConstructor
 @Getter
 @Setter
@@ -20,4 +23,8 @@ public class Student extends User {
 
     @Column(name = "student_id", unique = true)
     private String studentId; // This is the enrollment number of the student (e.g., UWU/ICT/22/082)
+
+    // Relationships
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
+    private List<Attendance> attendances = new ArrayList<>();
 }

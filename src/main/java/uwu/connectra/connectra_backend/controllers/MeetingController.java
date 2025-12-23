@@ -10,6 +10,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.AgoraTokenResponseDTO;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
+import uwu.connectra.connectra_backend.dtos.AttendanceReportResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
@@ -103,4 +104,46 @@ public class MeetingController {
                 )
         );
     }
+
+    // Leave Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER', 'STUDENT')")
+    @PutMapping("/{meetingId}/leave")
+    @Operation(summary = "Leave meeting by its ID")
+    public ResponseEntity<ApiResponse<String>> leaveMeetingById(@PathVariable String meetingId) {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                true,
+                "Left meeting successfully.",
+                meetingService.leaveMeeting(meetingId)
+        )
+        ));
+    }
+
+
+    // Stop Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @PutMapping("/{meetingId}/stop")
+    @Operation(summary = "Stop meeting by its ID")
+    public ResponseEntity<ApiResponse<MeetingResponseDTO>> stopMeeting(@PathVariable String meetingId) {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                true,
+                "Meeting stopped successfully.",
+                meetingService.stopMeeting(meetingId)
+        )
+        ));
+    }
+
+    // ===== ATTENDANCE REPOTS ENDPOINTS =====
+    // Get Attendance Report data for a Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @GetMapping("/{meetingId}/attendance")
+    @Operation(summary = "Get attendance report for a meeting by its ID")
+    public ResponseEntity<ApiResponse<AttendanceReportResponseDTO>> getAttendanceReport(@PathVariable String meetingId) {
+        AttendanceReportResponseDTO report = meetingService.generateAttendanceReport(meetingId);
+        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse<>(
+                true,
+                "Attendance report data generated successfully.",
+                report
+        ));
+    }
+
 }

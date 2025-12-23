@@ -9,6 +9,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -60,18 +61,11 @@ public class Meeting {
     @Column(name = "agora_channel_name", nullable = false, unique = true)
     private String agoraChannelName;
 
-    // TODO: Add fields for meeting recordings related features (When implementing that feature)
-//    @Column(name = "recording_resource_id", unique = true)
-//    private String recordingResourceId; // This is use to identify the recording resource
-//
-//    @Column(name = "recording_sid", unique = true)
-//    private String recordingSid; // This is the actual recording ID provided by Agora
-
-//    @Column(name = "recording_storage_path")
-//    private String recordingStoragePath;
-
     // Relationships
     @ManyToOne
     @JoinColumn(name = "lecturer_id", nullable = false)
     private Lecturer createdBy;
+
+    @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL)
+    private List<Attendance> attendances;
 }

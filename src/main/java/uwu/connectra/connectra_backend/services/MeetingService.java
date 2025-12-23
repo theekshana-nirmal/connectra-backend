@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uwu.connectra.connectra_backend.config.AgoraConfig;
 import uwu.connectra.connectra_backend.dtos.AgoraTokenResponseDTO;
+import uwu.connectra.connectra_backend.dtos.AttendanceReportResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
@@ -17,9 +18,11 @@ import uwu.connectra.connectra_backend.exceptions.MeetingCancelledException;
 import uwu.connectra.connectra_backend.exceptions.MeetingNotFoundException;
 import uwu.connectra.connectra_backend.exceptions.UnauthorizedException;
 import uwu.connectra.connectra_backend.repositories.MeetingRepository;
+import uwu.connectra.connectra_backend.repositories.StudentRepository;
 import uwu.connectra.connectra_backend.utils.AgoraTokenGenerator;
 import uwu.connectra.connectra_backend.utils.CurrentUserProvider;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -31,7 +34,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class MeetingService {
+    private final AttendanceService attendanceService;
     private final MeetingRepository meetingRepository;
+    private final StudentRepository studentRepository;
     private final CurrentUserProvider currentUserProvider;
     private final AgoraTokenGenerator agoraTokenGenerator;
     private final AgoraConfig agoraConfig;
@@ -127,6 +132,7 @@ public class MeetingService {
 
         if (currentUserRole == Role.STUDENT) {
             validateStudentMeetingAccess(meeting);
+            attendanceService.recordStudentAttendanceOnJoin(meeting);
         } else if (currentUserRole == Role.LECTURER) {
             validateLecturerMeetingAccess(meeting);
 
@@ -146,6 +152,147 @@ public class MeetingService {
         return mapToAgoraTokenResponse(meeting, agoraToken);
     }
 
+    // LEAVE MEETING BY ID
+    @Transactional
+    public String leaveMeeting(String meetingId) {
+        Meeting meeting = findMeetingById(meetingId);
+        Role currentUserRole = currentUserProvider.getCurrentUserRole();
+
+        // If the user is a student, update their attendance record
+        if (currentUserRole == Role.STUDENT) {
+            attendanceService.recordStudentAttendanceOnLeave(meeting);
+        }
+
+        log.info("User left meeting: {} with role: {}", meetingId, currentUserRole);
+        return String.format("Left meeting %s successfully.", meetingId);
+    }
+
+    // STOP MEETING BY ID
+    @Transactional
+    public MeetingResponseDTO stopMeeting(String meetingId) {
+        Meeting meeting = findMeetingById(meetingId);
+        Role currentUserRole = currentUserProvider.getCurrentUserRole();
+
+        if (currentUserRole != Role.LECTURER) {
+            throw new UnauthorizedException("Only lecturers can stop the meeting.");
+        }
+
+        Lecturer currentLecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
+
+        validateLecturerOwnership(meeting, currentLecturer);
+
+        validateMeetingIsLive(meeting);
+
+        meeting.setStatus(MeetingStatus.ENDED);
+        meeting.setActualEndTime(LocalDateTime.now());
+
+        Meeting stoppedMeeting = meetingRepository.save(meeting);
+
+        // Finalize all attendance records for the meeting
+        attendanceService.finalizeAttendanceForMeeting(stoppedMeeting);
+
+        log.info("Meeting stopped: {} by lecturer: {}", stoppedMeeting.getMeetingId(), currentLecturer.getEmail());
+
+        return mapToResponseDTO(stoppedMeeting);
+    }
+
+    // GET ATTENDANCE REPORT DATA FOR A MEETING
+    @Transactional(readOnly = true)
+    public AttendanceReportResponseDTO generateAttendanceReport(String meetingId) {
+        Meeting meeting = findMeetingById(meetingId);
+        validateLecturerCanAccessReport(meeting);
+        validateMeetingHasEnded(meeting);
+
+        AttendanceData attendanceData = collectAttendanceData(meeting);
+        return mapToAttendanceReportDTO(meeting, attendanceData);
+    }
+
+    // ==================== Attendance Report Helper Methods ====================
+    // Record to hold attendance data
+    private record AttendanceData(
+            List<Student> targetStudents,
+            List<Student> presentStudents,
+            List<Student> partiallyPresentStudents,
+            List<Student> absentStudents) {
+    }
+
+    // Validate that the current lecturer can access the attendance report
+    private void validateLecturerCanAccessReport(Meeting meeting) {
+        Role currentUserRole = currentUserProvider.getCurrentUserRole();
+
+        if (currentUserRole != Role.LECTURER) {
+            throw new UnauthorizedException("Only lecturers can generate attendance reports.");
+        }
+
+        Lecturer currentLecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
+        validateLecturerOwnership(meeting, currentLecturer);
+    }
+
+    // Collect attendance data for the meeting
+    private AttendanceData collectAttendanceData(Meeting meeting) {
+        String targetDegree = meeting.getTargetDegree();
+        int targetBatch = meeting.getTargetBatch();
+
+        List<Student> targetStudents = studentRepository.findAllByDegreeAndBatch(targetDegree, targetBatch);
+        List<Student> presentStudents = attendanceService.getAttendanceStatusForStudentInMeeting(
+                meeting.getMeetingId(), AttendanceStatus.PRESENT);
+        List<Student> partiallyPresentStudents = attendanceService.getAttendanceStatusForStudentInMeeting(
+                meeting.getMeetingId(), AttendanceStatus.PARTIALLY_PRESENT);
+
+        List<Student> totalParticipatedStudents = attendanceService
+                .getAttendedStudentsForMeeting(meeting.getMeetingId());
+
+        List<String> participatedStudentIds = totalParticipatedStudents.stream()
+                .map(Student::getEmail)
+                .toList();
+
+        // Filter absent students by comparing IDs
+        List<Student> absentStudents = targetStudents.stream()
+                .filter(student -> !participatedStudentIds.contains(student.getEmail()))
+                .toList();
+
+        return new AttendanceData(targetStudents, presentStudents, partiallyPresentStudents, absentStudents);
+    }
+
+    // Calculate meeting duration in minutes
+    private long calculateMeetingDuration(LocalDateTime startTime, LocalDateTime endTime) {
+        if (startTime == null || endTime == null) {
+            return 0;
+        }
+        return Duration.between(startTime, endTime).toMinutes();
+    }
+
+    // Map attendance data to AttendanceReportResponseDTO
+    private AttendanceReportResponseDTO mapToAttendanceReportDTO(Meeting meeting, AttendanceData attendanceData) {
+        Lecturer lecturer = meeting.getCreatedBy();
+        String lecturerName = lecturer.getFirstName() + " " + lecturer.getLastName();
+        long durationMinutes = calculateMeetingDuration(meeting.getActualStartTime(), meeting.getActualEndTime());
+
+        AttendanceReportResponseDTO reportDTO = new AttendanceReportResponseDTO();
+        reportDTO.setMeetingId(meeting.getMeetingId().toString());
+        reportDTO.setTopic(meeting.getTitle());
+        reportDTO.setLecturerName(lecturerName);
+        reportDTO.setDegree(meeting.getTargetDegree());
+        reportDTO.setBatch(meeting.getTargetBatch());
+        reportDTO.setStartedAt(meeting.getActualStartTime());
+        reportDTO.setEndedAt(meeting.getActualEndTime());
+        reportDTO.setDurationMinutes((int) durationMinutes);
+
+        reportDTO.setTotalStudents(attendanceData.targetStudents().size());
+        reportDTO.setTotalParticipated(
+                attendanceData.presentStudents().size() + attendanceData.partiallyPresentStudents().size());
+        reportDTO.setPresentCount(attendanceData.presentStudents().size());
+        reportDTO.setPartialCount(attendanceData.partiallyPresentStudents().size());
+        reportDTO.setAbsentCount(attendanceData.absentStudents().size());
+
+        reportDTO.setPresentStudents(
+                attendanceService.mapStudentsToAttendanceDTOs(attendanceData.presentStudents(), meeting));
+        reportDTO.setPartiallyAttendedStudents(
+                attendanceService.mapStudentsToAttendanceDTOs(attendanceData.partiallyPresentStudents(), meeting));
+        reportDTO.setAbsentStudents(
+                attendanceService.mapStudentsToAttendanceDTOs(attendanceData.absentStudents(), meeting));
+
+        return reportDTO;
     // === NEW METHOD: GET STUDENT MEETINGS ===
     @Transactional(readOnly = true)
     public List<MeetingResponseDTO> getStudentMeetings(String degree, Integer batch) {
@@ -203,6 +350,21 @@ public class MeetingService {
         if (meeting.getStatus() == MeetingStatus.ENDED) {
             throw new MeetingAlreadyEndedException(
                     "Cannot modify a meeting that has already ended.");
+        }
+    }
+
+    // Validate that the meeting has ended (for attendance reports)
+    private void validateMeetingHasEnded(Meeting meeting) {
+        if (meeting.getStatus() != MeetingStatus.ENDED) {
+            throw new UnauthorizedException(
+                    "Attendance report can only be generated for meetings that have ended.");
+        }
+    }
+
+    // Validate that the meeting is live
+    private void validateMeetingIsLive(Meeting meeting) {
+        if (meeting.getStatus() != MeetingStatus.LIVE) {
+            throw new UnauthorizedException("This meeting is not live.");
         }
     }
 
