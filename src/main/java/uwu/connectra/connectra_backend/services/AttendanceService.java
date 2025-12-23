@@ -169,7 +169,7 @@ public class AttendanceService {
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new IllegalArgumentException("Meeting not found"));
 
-        List<Attendance> attendances = attendanceRepository.findAllByMeetingAndStatus(meeting, status);
+        List<Attendance> attendances = attendanceRepository.findAllByMeetingAndAttendanceStatus(meeting, status);
 
         return attendances.stream()
                 .map(Attendance::getStudent)
@@ -189,8 +189,7 @@ public class AttendanceService {
                     student.getStudentId(),
                     studentName,
                     (attendance != null) ? attendance.getAttendanceStatus() : AttendanceStatus.ABSENT,
-                    durationMinutes
-            );
+                    durationMinutes);
         }).collect(Collectors.toList());
     }
 }
