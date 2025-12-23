@@ -3,12 +3,15 @@ package uwu.connectra.connectra_backend.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import uwu.connectra.connectra_backend.entities.Attendance;
+import uwu.connectra.connectra_backend.entities.AttendanceStatus;
 import uwu.connectra.connectra_backend.entities.Meeting;
 import uwu.connectra.connectra_backend.entities.Student;
 import uwu.connectra.connectra_backend.exceptions.UnauthorizedException;
 import uwu.connectra.connectra_backend.repositories.AttendanceRepository;
 import uwu.connectra.connectra_backend.utils.CurrentUserProvider;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 @Service
@@ -17,7 +20,7 @@ public class AttendanceService {
     private final CurrentUserProvider currentUserProvider;
     private final AttendanceRepository attendanceRepository;
 
-    // Helpers to record attendance
+    // ====== HELPER METHODS ===== //
     // Update student attendance on join
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
@@ -33,6 +36,10 @@ public class AttendanceService {
                     return newAttendance;
                 });
 
+        // If user is already in the meeting (hasn't left yet), auto-leave them first
+        autoLeaveStudentIfStillInMeeting(now, attendance);
+
+        // Now join them again with new timestamp
         attendance.setLastJoinedAt(now);
         attendanceRepository.save(attendance);
     }
@@ -43,8 +50,19 @@ public class AttendanceService {
 
         // Update attendance
         Attendance attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting).orElseThrow(
-                () -> new UnauthorizedException("Attendance record not found for student in this meeting.")
-        );
+                () -> new UnauthorizedException("Attendance record not found for student in this meeting."));
+
+        // Validate that the student has actually joined the meeting
+        if (attendance.getLastJoinedAt() == null) {
+            throw new UnauthorizedException("You have not joined the meeting yet.");
+        }
+
+        // Check if user has already left after their last join
+        if (attendance.getLeftAt() != null &&
+                (attendance.getLeftAt().isAfter(attendance.getLastJoinedAt())
+                        || attendance.getLeftAt().isEqual(attendance.getLastJoinedAt()))) {
+            throw new UnauthorizedException("You have already left the meeting.");
+        }
 
         LocalDateTime now = LocalDateTime.now();
         attendance.setLeftAt(now);
@@ -52,6 +70,77 @@ public class AttendanceService {
         long duration = java.time.Duration.between(attendance.getLastJoinedAt(), now).toMinutes();
         attendance.setTotalDurationInMinutes(attendance.getTotalDurationInMinutes() + duration);
 
+        // Calculate and update attendance percentage and status
+        updateAttendancePercentageAndStatus(attendance, meeting);
+
         attendanceRepository.save(attendance);
+    }
+
+    // Update all attendance records when a meeting ends
+    public void finalizeAttendanceForMeeting(Meeting meeting) {
+        // Get all attendance records for this meeting
+        if (meeting.getAttendances() != null && !meeting.getAttendances().isEmpty()) {
+            LocalDateTime meetingEndTime = LocalDateTime.now();
+
+            for (Attendance attendance : meeting.getAttendances()) {
+                autoLeaveStudentIfStillInMeeting(meetingEndTime, attendance);
+
+                // Calculate final attendance percentage and status
+                updateAttendancePercentageAndStatus(attendance, meeting);
+                attendanceRepository.save(attendance);
+            }
+        }
+    }
+
+    // Auto-leave student if they are still marked as in the meeting
+    private void autoLeaveStudentIfStillInMeeting(LocalDateTime meetingEndTime, Attendance attendance) {
+        if (attendance.getLastJoinedAt() != null &&
+                (attendance.getLeftAt() == null ||
+                        attendance.getLeftAt().isBefore(attendance.getLastJoinedAt()))) {
+            attendance.setLeftAt(meetingEndTime);
+            long duration = java.time.Duration.between(attendance.getLastJoinedAt(), meetingEndTime)
+                    .toMinutes();
+            attendance.setTotalDurationInMinutes(attendance.getTotalDurationInMinutes() + duration);
+        }
+    }
+
+    // Update attendance percentage and status based on total duration vs duration
+    private void updateAttendancePercentageAndStatus(Attendance attendance, Meeting meeting) {
+        LocalDateTime meetingStart = meeting.getActualStartTime() != null
+                ? meeting.getActualStartTime()
+                : meeting.getScheduledStartTime();
+
+        LocalDateTime meetingEnd = meeting.getActualEndTime() != null
+                ? meeting.getActualEndTime()
+                : LocalDateTime.now(); // If meeting is still live, use current time
+
+        // Calculate total meeting duration in minutes
+        long totalMeetingDuration = java.time.Duration.between(meetingStart, meetingEnd).toMinutes();
+
+        // Avoid division by zero
+        if (totalMeetingDuration <= 0) {
+            attendance.setAttendancePercentage(0.0);
+            attendance.setAttendanceStatus(AttendanceStatus.ABSENT);
+            return;
+        }
+
+        // Calculate attendance percentage
+        double percentage = (attendance.getTotalDurationInMinutes() * 100.0) / totalMeetingDuration;
+
+        // Cap at 100% (in case of calculation edge cases)
+        percentage = Math.min(percentage, 100.0);
+        percentage = BigDecimal.valueOf(percentage)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
+        attendance.setAttendancePercentage(percentage);
+
+        // Determine attendance status based on percentage
+        if (percentage >= 80.0) {
+            attendance.setAttendanceStatus(AttendanceStatus.PRESENT);
+        } else if (percentage > 0.0) {
+            attendance.setAttendanceStatus(AttendanceStatus.PARTIALLY_PRESENT);
+        } else {
+            attendance.setAttendanceStatus(AttendanceStatus.ABSENT);
+        }
     }
 }
