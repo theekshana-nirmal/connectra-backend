@@ -104,6 +104,20 @@ public class MeetingController {
         );
     }
 
+    // Leave Meeting by its ID
+    @PreAuthorize("hasAnyRole('LECTURER', 'STUDENT')")
+    @PutMapping("/{meetingId}/leave")
+    @Operation(summary = "Leave meeting by its ID")
+    public ResponseEntity<ApiResponse<String>> leaveMeetingById(@PathVariable String meetingId) {
+        return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                true,
+                "Left meeting successfully.",
+                meetingService.leaveMeeting(meetingId)
+        )
+        ));
+    }
+
+
     // Stop Meeting by its ID
     @PreAuthorize("hasAnyRole('LECTURER')")
     @PutMapping("/{meetingId}/stop")
