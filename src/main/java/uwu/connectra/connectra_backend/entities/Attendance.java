@@ -32,7 +32,7 @@ public class Attendance {
     private LocalDateTime leftAt;
 
     @Column(name = "total_duration_in_minutes")
-    private Integer totalDurationInMinutes;
+    private long totalDurationInMinutes;
 
     @Column(name = "attendance_percentage")
     private Double attendancePercentage;
@@ -54,8 +54,7 @@ public class Attendance {
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "meeting_id", nullable = false)
-    private Meeting meetingId;
+    private Meeting meeting;
 }
