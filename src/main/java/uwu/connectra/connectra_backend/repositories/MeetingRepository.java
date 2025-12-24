@@ -19,7 +19,4 @@ public interface MeetingRepository extends JpaRepository<Meeting, UUID> {
     // Get meetings by target degree, target batch, and status
     List<Meeting> findAllByTargetDegreeAndTargetBatchAndStatus(String targetDegree, Integer targetBatch,
             MeetingStatus status);
-
-    // Get all meetings by meeting status
-    List<Meeting> findAllByStatus(MeetingStatus status);
 }
