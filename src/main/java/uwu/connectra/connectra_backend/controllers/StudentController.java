@@ -2,67 +2,59 @@ package uwu.connectra.connectra_backend.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
+import uwu.connectra.connectra_backend.dtos.StudentAttendanceHistoryResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
-import uwu.connectra.connectra_backend.entities.Student;
-import uwu.connectra.connectra_backend.entities.User;
-import uwu.connectra.connectra_backend.repositories.UserRepository;
+import uwu.connectra.connectra_backend.entities.AttendanceStatus;
+import uwu.connectra.connectra_backend.services.AttendanceService;
 import uwu.connectra.connectra_backend.services.MeetingService;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/student")
 @Tag(name = "Student Controller", description = "Endpoints for student-specific operations")
 public class StudentController {
-
     private final MeetingService meetingService;
-    private final UserRepository userRepository;
+    private final AttendanceService attendanceService;
 
-    public StudentController(MeetingService meetingService, UserRepository userRepository) {
-        this.meetingService = meetingService;
-        this.userRepository = userRepository;
-    }
-
-    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
-    @GetMapping("/dashboard")
-    public ResponseEntity<ApiResponse<String>> studentDashboard() {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Welcome to the Student Dashboard!", null));
-    }
-
-    //NEW ENDPOINT: Get Student Meetings
+    // GET ALL SCHEDULED/LIVE MEETINGS FOR CURRENT STUDENT'S DEGREE AND BATCH
     @PreAuthorize("hasRole('STUDENT')")
     @GetMapping("/meetings")
-    @Operation(summary = "Get all scheduled/live meetings for the student's degree and batch")
-    public ResponseEntity<ApiResponse<List<MeetingResponseDTO>>> getMyMeetings(Authentication authentication) {
-        // 1. Get logged-in user email
-        String email = authentication.getName();
-
-        // 2. Fetch User and cast to Student to get academic details
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Student profile not found"));
-
-        if (!(user instanceof Student student)) {
-            throw new RuntimeException("Authenticated user is not a student");
-        }
-
-        // 3. Call service with student's Degree and Batch
-        List<MeetingResponseDTO> meetings = meetingService.getStudentMeetings(
-                student.getDegree(),
-                student.getBatch()
-        );
+    @Operation(summary = "Get all scheduled/live meetings for the current student's degree and batch")
+    public ResponseEntity<ApiResponse<List<MeetingResponseDTO>>> getMyMeetings() {
+        List<MeetingResponseDTO> meetings = meetingService.getStudentMeetings();
 
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Meetings retrieved successfully.",
-                meetings
-        ));
+                meetings));
     }
 
+    // GET ATTENDANCE HISTORY FOR CURRENT STUDENT
+    @PreAuthorize("hasRole('STUDENT')")
+    @GetMapping("/attendance/history")
+    @Operation(
+            summary = "Get attendance history for the current student",
+            description = "Returns all completed meetings for the student's degree/batch with detailed attendance information. "
+                    +
+                    "Includes both attended and missed meetings. Supports filtering by attendance status."
+    )
+    public ResponseEntity<ApiResponse<List<StudentAttendanceHistoryResponseDTO>>> getMyAttendanceHistory(
+            @RequestParam(required = false) AttendanceStatus status) {
+        List<StudentAttendanceHistoryResponseDTO> attendanceHistory = attendanceService
+                .getStudentAttendanceHistory(status);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Attendance history retrieved successfully.",
+                attendanceHistory));
+    }
 }
