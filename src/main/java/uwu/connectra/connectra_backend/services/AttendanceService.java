@@ -3,10 +3,8 @@ package uwu.connectra.connectra_backend.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import uwu.connectra.connectra_backend.dtos.StudentAttendanceDTO;
-import uwu.connectra.connectra_backend.entities.Attendance;
-import uwu.connectra.connectra_backend.entities.AttendanceStatus;
-import uwu.connectra.connectra_backend.entities.Meeting;
-import uwu.connectra.connectra_backend.entities.Student;
+import uwu.connectra.connectra_backend.dtos.StudentAttendanceHistoryResponseDTO;
+import uwu.connectra.connectra_backend.entities.*;
 import uwu.connectra.connectra_backend.exceptions.UnauthorizedException;
 import uwu.connectra.connectra_backend.repositories.AttendanceRepository;
 import uwu.connectra.connectra_backend.repositories.MeetingRepository;
@@ -191,5 +189,81 @@ public class AttendanceService {
                     (attendance != null) ? attendance.getAttendanceStatus() : AttendanceStatus.ABSENT,
                     durationMinutes);
         }).collect(Collectors.toList());
+    }
+
+    // Get complete attendance history for the current student
+    public List<StudentAttendanceHistoryResponseDTO> getStudentAttendanceHistory(
+            AttendanceStatus statusFilter) {
+
+        // 1. Get current authenticated student
+        Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
+
+        // 2. Find all ENDED/COMPLETED meetings for student's degree and batch
+        List<Meeting> completedMeetings = meetingRepository.findAllByTargetDegreeAndTargetBatchAndStatus(
+                currentStudent.getDegree(),
+                currentStudent.getBatch(),
+                MeetingStatus.ENDED);
+
+        // 3. For each meeting, create a DTO with attendance data
+        List<StudentAttendanceHistoryResponseDTO> historyList = completedMeetings
+                .stream()
+                .map(meeting -> {
+                    // Look up attendance record
+                    Attendance attendance = attendanceRepository
+                            .findByStudentAndMeeting(currentStudent, meeting)
+                            .orElse(null);
+
+                    // Calculate meeting duration
+                    long meetingDuration = 0;
+                    if (meeting.getActualStartTime() != null && meeting.getActualEndTime() != null) {
+                        meetingDuration = Duration.between(
+                                meeting.getActualStartTime(),
+                                meeting.getActualEndTime()).toMinutes();
+                    }
+
+                    // Create DTO
+                    StudentAttendanceHistoryResponseDTO dto = new StudentAttendanceHistoryResponseDTO();
+
+                    dto.setMeetingId(meeting.getMeetingId());
+                    dto.setMeetingTitle(meeting.getTitle());
+                    dto.setMeetingDate(meeting.getScheduledStartTime());
+
+                    // Set lecturer name
+                    Lecturer lecturer = meeting.getCreatedBy();
+                    dto.setLecturerName(lecturer.getFirstName() + " " + lecturer.getLastName());
+
+                    dto.setMeetingDuration(meetingDuration);
+
+                    // If attendance record exists, populate with actual data
+                    if (attendance != null) {
+                        dto.setJoinedAt(attendance.getJoinedAt());
+                        dto.setLeftAt(attendance.getLeftAt());
+                        dto.setTotalTimeInMinutes(attendance.getTotalDurationInMinutes());
+                        dto.setAttendancePercentage(attendance.getAttendancePercentage());
+                        dto.setAttendanceStatus(attendance.getAttendanceStatus().name());
+                    } else {
+                        // Student was absent - set default values
+                        dto.setJoinedAt(null);
+                        dto.setLeftAt(null);
+                        dto.setTotalTimeInMinutes(0L);
+                        dto.setAttendancePercentage(0.0);
+                        dto.setAttendanceStatus(AttendanceStatus.ABSENT.name());
+                    }
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        // 4. Apply status filter if provided
+        if (statusFilter != null) {
+            historyList = historyList.stream()
+                    .filter(dto -> dto.getAttendanceStatus().equals(statusFilter.name()))
+                    .collect(Collectors.toList());
+        }
+
+        // 5. Sort by meeting date descending (newest first)
+        historyList.sort((dto1, dto2) -> dto2.getMeetingDate().compareTo(dto1.getMeetingDate()));
+
+        return historyList;
     }
 }
