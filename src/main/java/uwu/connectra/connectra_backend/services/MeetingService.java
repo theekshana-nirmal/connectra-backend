@@ -295,7 +295,7 @@ public class MeetingService {
         return reportDTO;
     }
 
-    // === NEW METHOD: GET STUDENT MEETINGS ===
+    // GET STUDENT MEETINGS ===
     @Transactional(readOnly = true)
     public List<MeetingResponseDTO> getStudentMeetings(String degree, Integer batch) {
         // 1. Fetch meetings based on Degree and Batch
