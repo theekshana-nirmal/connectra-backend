@@ -1,0 +1,19 @@
+package uwu.connectra.connectra_backend.repositories;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import uwu.connectra.connectra_backend.entities.Role;
+import uwu.connectra.connectra_backend.entities.User;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository // Prevents Spring from trying to create an instance
+public interface UserRepository extends JpaRepository<User, Long> {
+    boolean existsByEmail(String email);
+    boolean existsByEmailAndIdNot(String email, Long id);
+    Optional<User> findByEmail(String email);
+
+    // Find all users by role
+    List<User> findAllByRole(Role role);
+}

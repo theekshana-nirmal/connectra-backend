@@ -1,0 +1,15 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
+
+jwt:
+  expiration:
+    access-token: 43200 # in minutes (dev: 30 days for easier testing) -> 30 × 24 × 60 = 43200 minutes
+    refresh-token: 30 # in days (30 days)

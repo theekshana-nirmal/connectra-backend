@@ -1,3 +1,51 @@
 spring:
   application:
     name: connectra-backend
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    #database-platform: org.hibernate.dialect.PostgresSQLDialect
+    open-in-view: false # Disabled DB queries run while returning JSON
+
+  security:
+    user:
+      name: ${SPRING_USER}
+      password: ${SPRING_PASSWORD}
+
+jwt:
+  expiration:
+    access-token: 30 # in minutes (production: 30 minutes)
+    refresh-token: 30 # in days (30 days)
+
+# Agora configuration
+agora:
+  app-id: ${AGORA_APP_ID}
+  app-certificate: ${AGORA_APP_CERTIFICATE}
+  token-expire-time: 28800 # in seconds (8 hour)
+
+# Production default
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+# GZIP compression
+server:
+  compression:
+    enabled: true
+    mime-types:
+      - application/json,
+      - application/xml,
+      - text/html,text/xml,
+      - text/plain,text/css,
+      - text/javascript,
+      - application/javascript
+    min-response-size: 1024 # in bytes
