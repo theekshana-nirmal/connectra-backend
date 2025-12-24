@@ -20,4 +20,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     // Get students by attendance status for a specific meeting
     List<Attendance> findAllByMeetingAndAttendanceStatus(Meeting meeting, AttendanceStatus attendanceStatus);
+
+    // Get all Attendance records for a Student
+    List<Attendance> findAllByStudent(Student student);
 }
