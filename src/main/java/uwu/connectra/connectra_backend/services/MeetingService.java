@@ -295,21 +295,24 @@ public class MeetingService {
         return reportDTO;
     }
 
-    // GET STUDENT MEETINGS ===
+    // GET ALL SCHEDULED/LIVE MEETINGS FOR CURRENT STUDENT'S DEGREE AND BATCH
     @Transactional(readOnly = true)
-    public List<MeetingResponseDTO> getStudentMeetings(String degree, Integer batch) {
-        // 1. Fetch meetings based on Degree and Batch
-        List<Meeting> allGroupMeetings = meetingRepository.findAllByTargetDegreeAndTargetBatch(degree, batch);
+    public List<MeetingResponseDTO> getStudentMeetings() {
+        // 1. Get current student with business logic validation
+        Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
+
+        // 2. Fetch meetings based on student's Degree and Batch
+        List<Meeting> allGroupMeetings = meetingRepository.findAllByTargetDegreeAndTargetBatch(
+                currentStudent.getDegree(),
+                currentStudent.getBatch());
 
         return allGroupMeetings.stream()
-                // 2. Filter: Only keep SCHEDULED or LIVE meetings
-                .filter(meeting ->
-                        meeting.getStatus() == MeetingStatus.SCHEDULED ||
-                                meeting.getStatus() == MeetingStatus.LIVE
-                )
-                // 3. Sort: By scheduled start time (Ascending)
+                // 3. Filter: Only keep SCHEDULED or LIVE meetings
+                .filter(meeting -> meeting.getStatus() == MeetingStatus.SCHEDULED ||
+                        meeting.getStatus() == MeetingStatus.LIVE)
+                // 4. Sort: By scheduled start time (Ascending)
                 .sorted(Comparator.comparing(Meeting::getScheduledStartTime))
-                // 4. Map: Convert to DTO
+                // 5. Map: Convert to DTO
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
