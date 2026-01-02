@@ -5,16 +5,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
 import uwu.connectra.connectra_backend.dtos.StudentAttendanceHistoryResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
+import uwu.connectra.connectra_backend.dtos.quiz.ActiveQuizDTO;
+import uwu.connectra.connectra_backend.dtos.quiz.SubmitQuizResponseDTO;
 import uwu.connectra.connectra_backend.entities.AttendanceStatus;
 import uwu.connectra.connectra_backend.services.AttendanceService;
 import uwu.connectra.connectra_backend.services.MeetingService;
+import uwu.connectra.connectra_backend.services.QuizService;
 
 import java.util.List;
 
@@ -25,6 +26,7 @@ import java.util.List;
 public class StudentController {
     private final MeetingService meetingService;
     private final AttendanceService attendanceService;
+    private final QuizService quizService;
 
     // GET ALL SCHEDULED/LIVE MEETINGS FOR CURRENT STUDENT'S DEGREE AND BATCH
     @PreAuthorize("hasRole('STUDENT')")
@@ -56,5 +58,26 @@ public class StudentController {
                 true,
                 "Attendance history retrieved successfully.",
                 attendanceHistory));
+    }
+
+    // QUIZ PARTICIPATION ENDPOINTS
+
+    @PreAuthorize("hasRole('STUDENT')")
+    @GetMapping("/meetings/{meetingId}/quiz/active")
+    @Operation(summary = "Get the currently active quiz for a meeting")
+    public ResponseEntity<ApiResponse<ActiveQuizDTO>> getActiveQuiz(@PathVariable String meetingId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true, "Active quiz retrieved successfully",
+                quizService.getActiveQuizForStudent(meetingId)));
+    }
+
+    @PreAuthorize("hasRole('STUDENT')")
+    @PostMapping("/quizzes/{quizId}/respond")
+    @Operation(summary = "Submit an answer for a quiz")
+    public ResponseEntity<ApiResponse<Void>> submitQuizResponse(
+            @PathVariable Long quizId,
+            @RequestBody @Validated SubmitQuizResponseDTO request) {
+        quizService.submitResponse(quizId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Response submitted successfully", null));
     }
 }

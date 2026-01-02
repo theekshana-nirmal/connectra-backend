@@ -14,7 +14,11 @@ import uwu.connectra.connectra_backend.dtos.AttendanceReportResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
+import uwu.connectra.connectra_backend.dtos.quiz.CreateQuizRequestDTO;
+import uwu.connectra.connectra_backend.dtos.quiz.QuizResponseDTO;
+import uwu.connectra.connectra_backend.dtos.quiz.QuizResultsSummaryDTO;
 import uwu.connectra.connectra_backend.services.MeetingService;
+import uwu.connectra.connectra_backend.services.QuizService;
 
 import java.util.List;
 
@@ -24,6 +28,7 @@ import java.util.List;
 @Tag(name = "Meeting Controller", description = "Endpoints for managing meetings")
 public class MeetingController {
     private final MeetingService meetingService;
+    private final QuizService quizService;
 
     // Create Meeting
     @PostMapping
@@ -132,7 +137,7 @@ public class MeetingController {
         ));
     }
 
-    // ===== ATTENDANCE REPOTS ENDPOINTS =====
+    // ===== ATTENDANCE REPORTS ENDPOINTS =====
     // Get Attendance Report data for a Meeting by its ID
     @PreAuthorize("hasAnyRole('LECTURER')")
     @GetMapping("/{meetingId}/attendance")
@@ -146,4 +151,61 @@ public class MeetingController {
         ));
     }
 
+
+    // QUIZ MANAGEMENT ENDPOINTS
+
+    @PreAuthorize("hasRole('LECTURER')")
+    @PostMapping("/{meetingId}/quizzes")
+    @Operation(summary = "Create a new quiz for a meeting")
+    public ResponseEntity<ApiResponse<QuizResponseDTO>> createQuiz(
+            @PathVariable String meetingId,
+            @RequestBody @Validated CreateQuizRequestDTO request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(
+                true, "Quiz created successfully",
+                quizService.createQuiz(meetingId, request)));
+    }
+
+    @PreAuthorize("hasRole('LECTURER')")
+    @GetMapping("/{meetingId}/quizzes")
+    @Operation(summary = "Get all quizzes for a meeting")
+    public ResponseEntity<ApiResponse<List<QuizResponseDTO>>> getQuizzes(@PathVariable String meetingId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true, "Quizzes retrieved successfully",
+                quizService.getQuizzesForMeeting(meetingId)));
+    }
+
+    @PreAuthorize("hasRole('LECTURER')")
+    @DeleteMapping("/quizzes/{quizId}")
+    @Operation(summary = "Delete a quiz")
+    public ResponseEntity<ApiResponse<Void>> deleteQuiz(@PathVariable Long quizId) {
+        quizService.deleteQuiz(quizId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Quiz deleted successfully", null));
+    }
+
+    @PreAuthorize("hasRole('LECTURER')")
+    @PostMapping("/quizzes/{quizId}/launch")
+    @Operation(summary = "Launch a quiz (start timer)")
+    public ResponseEntity<ApiResponse<QuizResponseDTO>> launchQuiz(@PathVariable Long quizId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true, "Quiz launched successfully",
+                quizService.launchQuiz(quizId)));
+    }
+
+    @PreAuthorize("hasRole('LECTURER')")
+    @PostMapping("/quizzes/{quizId}/end")
+    @Operation(summary = "End an active quiz")
+    public ResponseEntity<ApiResponse<QuizResponseDTO>> endQuiz(@PathVariable Long quizId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true, "Quiz ended successfully",
+                quizService.endQuiz(quizId)));
+    }
+
+    @PreAuthorize("hasRole('LECTURER')")
+    @GetMapping("/quizzes/{quizId}/results")
+    @Operation(summary = "Get results for a quiz")
+    public ResponseEntity<ApiResponse<QuizResultsSummaryDTO>> getQuizResults(@PathVariable Long quizId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true, "Quiz results retrieved successfully",
+                quizService.getQuizResults(quizId)));
+    }
 }

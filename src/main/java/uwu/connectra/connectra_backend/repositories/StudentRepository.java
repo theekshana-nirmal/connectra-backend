@@ -10,4 +10,7 @@ import java.util.List;
 public interface StudentRepository extends JpaRepository<Student, Long> {
     // Find all students by their degree and batch
     List<Student> findAllByDegreeAndBatch(String degree, int batch);
+
+    // Count students by degree and batch (Used for Quiz Response Rate)
+    long countByDegreeAndBatch(String degree, int batch);
 }
