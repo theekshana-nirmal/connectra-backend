@@ -34,3 +34,11 @@ build/
 
 ### Envirnonment Files ###
 .env
+*.env
+.env.local
+.env.prod
+.env.dev
+
+application-local.properties
+*.jar
+*.war
