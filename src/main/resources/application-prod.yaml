@@ -1,0 +1,36 @@
+# Production configuration
+# Activated when SPRING_PROFILES_ACTIVE=prod
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  # Database settings inherited from application.yaml
+  # DB_URL, DB_USERNAME, DB_PASSWORD come from environment variables
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+# Swagger disabled in production
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+# Server configuration
+server:
+  port: ${PORT:8080}
+
+# Production logging settings
+logging:
+  level:
+    root: INFO
+    uwu.connectra: INFO
+    org.springframework.security: WARN
+    org.hibernate: WARN
