@@ -36,6 +36,8 @@ build/
 .env
 *.env
 .env.local
+.env.prod
+.env.dev
 
 application-local.properties
 *.jar
