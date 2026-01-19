@@ -7,6 +7,10 @@ spring:
 
   # Database settings inherited from application.yaml
   # DB_URL, DB_USERNAME, DB_PASSWORD come from environment variables
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
