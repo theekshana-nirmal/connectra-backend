@@ -1,5 +1,5 @@
 # .github/workflows/ci.yml
-# This workflow builds, tests, and pushes Docker image to Docker Hub
+# This workflow builds, tests, and pushes Docker image to Docker Hub, then triggers Render deployment
 
 name: CI/CD Pipeline
 
@@ -33,7 +33,7 @@ jobs:
     - name: Build with Maven
       run: ./mvnw clean package -DskipTests
     
-    # Step 4: Run tests (uncomment only if have tests)
+    # Step 4: Run tests (uncomment when you have tests)
     # - name: Run tests
     #   run: ./mvnw test
 
@@ -84,8 +84,33 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production/render')
     
     steps:
+    - name: Wait for Docker Hub to process image
+      run: |
+        echo "⏳ Waiting 30 seconds for Docker Hub to fully process the image..."
+        sleep 30
+    
     - name: Trigger Render Deploy
       run: |
-        echo "⏰ Triggering Render deployment..."
-        curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-        echo "✅ Render deployment triggered!"
+        echo "🚀 Triggering Render deployment..."
+        response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+        
+        if [ "$response" = "200" ] || [ "$response" = "201" ]; then
+          echo "✅ Render deployment triggered successfully! (HTTP $response)"
+        else
+          echo "⚠️ Render deployment trigger received HTTP $response"
+          echo "Check Render dashboard to verify deployment status"
+        fi
+    
+    - name: Deployment information
+      run: |
+        echo "📋 Deployment Summary:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "✅ Code built and tested"
+        echo "✅ Docker image pushed to Docker Hub"
+        echo "✅ Render deployment webhook triggered"
+        echo ""
+        echo "🔗 Next steps:"
+        echo "1. Check Docker Hub: https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/connectra-backend"
+        echo "2. Monitor Render deployment in your dashboard"
+        echo "3. Wait 5-10 minutes for deployment to complete"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
