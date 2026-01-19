@@ -1,0 +1,91 @@
+# .github/workflows/ci.yml
+# This workflow builds, tests, and pushes Docker image to Docker Hub
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, production/render ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/connectra-backend
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Step 1: Get the code
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Step 2: Set up Java 21
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+    
+    # Step 3: Build the project
+    - name: Build with Maven
+      run: ./mvnw clean package -DskipTests
+    
+    # Step 4: Run tests (uncomment only if have tests)
+    # - name: Run tests
+    #   run: ./mvnw test
+
+  # Build and push Docker image to Docker Hub
+  docker-build-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production/render')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Set up Docker Buildx for better builds
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    # Login to Docker Hub
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    # Build and push the image
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ${{ env.DOCKER_IMAGE }}:latest
+          ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Image pushed successfully
+      run: |
+        echo "✅ Docker image pushed to Docker Hub!"
+        echo "📦 Image: ${{ env.DOCKER_IMAGE }}:latest"
+        echo "🏷️ Tag: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
+
+  # Trigger Render deployment after Docker image is pushed
+  deploy-to-render:
+    needs: docker-build-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production/render')
+    
+    steps:
+    - name: Trigger Render Deploy
+      run: |
+        echo "⏰ Triggering Render deployment..."
+        curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+        echo "✅ Render deployment triggered!"
