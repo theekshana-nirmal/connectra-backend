@@ -2,6 +2,7 @@ package uwu.connectra.connectra_backend.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import uwu.connectra.connectra_backend.dtos.StudentAttendanceDTO;
 import uwu.connectra.connectra_backend.dtos.StudentAttendanceHistoryResponseDTO;
 import uwu.connectra.connectra_backend.entities.*;
@@ -27,6 +28,7 @@ public class AttendanceService {
 
     // ====== HELPER METHODS ===== //
     // Update student attendance on join
+    @Transactional
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
@@ -50,6 +52,7 @@ public class AttendanceService {
     }
 
     // Update student attendance on leave and calculate total duration
+    @Transactional
     public void recordStudentAttendanceOnLeave(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
 
