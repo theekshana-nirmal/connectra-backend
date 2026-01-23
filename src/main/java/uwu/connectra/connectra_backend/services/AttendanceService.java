@@ -48,7 +48,17 @@ public class AttendanceService {
 
         // Now join them again with new timestamp
         attendance.setLastJoinedAt(now);
-        attendanceRepository.save(attendance);
+
+        try {
+            attendanceRepository.save(attendance);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Race condition: another concurrent request already created the record
+            // Re-fetch the existing record and update it instead
+            attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
+                    .orElseThrow(() -> new RuntimeException("Failed to find attendance after constraint violation"));
+            attendance.setLastJoinedAt(now);
+            attendanceRepository.save(attendance);
+        }
     }
 
     // Update student attendance on leave and calculate total duration
