@@ -26,38 +26,46 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final MeetingRepository meetingRepository;
 
-    // ====== HELPER METHODS ===== //
+    // Lock map to prevent concurrent attendance creation for the same
+    // student+meeting
+    private final java.util.concurrent.ConcurrentHashMap<String, Object> attendanceLocks = new java.util.concurrent.ConcurrentHashMap<>();
+
     // Update student attendance on join
     @Transactional
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
 
-        // Create or update attendance record
-        Attendance attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
-                .orElseGet(() -> {
-                    Attendance newAttendance = new Attendance();
-                    newAttendance.setStudent(currentStudent);
-                    newAttendance.setMeeting(meeting);
-                    newAttendance.setJoinedAt(now);
-                    return newAttendance;
-                });
+        // Create a lock key for this student-meeting combination
+        String lockKey = currentStudent.getId() + "-" + meeting.getMeetingId().toString();
+        Object lock = attendanceLocks.computeIfAbsent(lockKey, k -> new Object());
 
-        // If user is already in the meeting (hasn't left yet), auto-leave them first
-        autoLeaveStudentIfStillInMeeting(now, attendance);
+        synchronized (lock) {
+            try {
+                // Check if attendance already exists
+                Attendance attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
+                        .orElse(null);
 
-        // Now join them again with new timestamp
-        attendance.setLastJoinedAt(now);
+                if (attendance == null) {
+                    // Create new attendance record
+                    attendance = new Attendance();
+                    attendance.setStudent(currentStudent);
+                    attendance.setMeeting(meeting);
+                    attendance.setJoinedAt(now);
+                    attendance.setLastJoinedAt(now);
+                    attendanceRepository.saveAndFlush(attendance);
+                } else {
+                    // If user is already in the meeting (hasn't left yet), auto-leave them first
+                    autoLeaveStudentIfStillInMeeting(now, attendance);
 
-        try {
-            attendanceRepository.save(attendance);
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // Race condition: another concurrent request already created the record
-            // Re-fetch the existing record and update it instead
-            attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
-                    .orElseThrow(() -> new RuntimeException("Failed to find attendance after constraint violation"));
-            attendance.setLastJoinedAt(now);
-            attendanceRepository.save(attendance);
+                    // Update lastJoinedAt for existing record
+                    attendance.setLastJoinedAt(now);
+                    attendanceRepository.save(attendance);
+                }
+            } finally {
+                // Clean up lock entry to prevent memory leak
+                attendanceLocks.remove(lockKey);
+            }
         }
     }
 
