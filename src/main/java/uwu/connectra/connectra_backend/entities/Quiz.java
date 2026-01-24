@@ -27,16 +27,16 @@ public class Quiz {
     @Column(name = "question", nullable = false, length = 1000)
     private String question;
 
-    @Column(name = "optiona", nullable = false, length = 500)
+    @Column(name = "option_a", nullable = false, length = 500)
     private String optionA;
 
-    @Column(name = "optionb", nullable = false, length = 500)
+    @Column(name = "option_b", nullable = false, length = 500)
     private String optionB;
 
-    @Column(name = "optionc", nullable = false, length = 500)
+    @Column(name = "option_c", nullable = false, length = 500)
     private String optionC;
 
-    @Column(name = "optiond", nullable = false, length = 500)
+    @Column(name = "option_d", nullable = false, length = 500)
     private String optionD;
 
     @Enumerated(EnumType.STRING)
