@@ -132,7 +132,12 @@ public class MeetingService {
 
         if (currentUserRole == Role.STUDENT) {
             validateStudentMeetingAccess(meeting);
-            attendanceService.recordStudentAttendanceOnJoin(meeting);
+            try {
+                attendanceService.recordStudentAttendanceOnJoin(meeting);
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                // Ignore duplicate attendance record (race condition)
+                log.debug("Concurrent attendance recording detected for student in meeting {}", meetingId);
+            }
         } else if (currentUserRole == Role.LECTURER) {
             validateLecturerMeetingAccess(meeting);
 

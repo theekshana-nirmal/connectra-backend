@@ -26,39 +26,36 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final MeetingRepository meetingRepository;
 
-    // ====== HELPER METHODS ===== //
-    // Update student attendance on join
-    @Transactional
+    /**
+     * Record student attendance when joining a meeting.
+     * Uses REQUIRES_NEW to isolate this transaction.
+     * IF duplicate key error occurs, it causes this inner transaction to rollback.
+     * The caller (MeetingService) must catch the exception and ignore it.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
 
-        // Create or update attendance record
+        // Check if attendance already exists
         Attendance attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
-                .orElseGet(() -> {
-                    Attendance newAttendance = new Attendance();
-                    newAttendance.setStudent(currentStudent);
-                    newAttendance.setMeeting(meeting);
-                    newAttendance.setJoinedAt(now);
-                    return newAttendance;
-                });
+                .orElse(null);
 
-        // If user is already in the meeting (hasn't left yet), auto-leave them first
-        autoLeaveStudentIfStillInMeeting(now, attendance);
-
-        // Now join them again with new timestamp
-        attendance.setLastJoinedAt(now);
-
-        try {
-            attendanceRepository.save(attendance);
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // Race condition: another concurrent request already created the record
-            // Re-fetch the existing record and update it instead
-            attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
-                    .orElseThrow(() -> new RuntimeException("Failed to find attendance after constraint violation"));
+        if (attendance == null) {
+            // Create new attendance record
+            attendance = new Attendance();
+            attendance.setStudent(currentStudent);
+            attendance.setMeeting(meeting);
+            attendance.setJoinedAt(now);
             attendance.setLastJoinedAt(now);
             attendanceRepository.save(attendance);
+            return;
         }
+
+        // Update existing record (if user rejoins)
+        autoLeaveStudentIfStillInMeeting(now, attendance);
+        attendance.setLastJoinedAt(now);
+        attendanceRepository.save(attendance);
     }
 
     // Update student attendance on leave and calculate total duration
@@ -75,11 +72,14 @@ public class AttendanceService {
             throw new UnauthorizedException("You have not joined the meeting yet.");
         }
 
-        // Check if user has already left after their last join
+        // Check if user has already left after their last join - if so, just return
+        // (idempotent)
         if (attendance.getLeftAt() != null &&
                 (attendance.getLeftAt().isAfter(attendance.getLastJoinedAt())
                         || attendance.getLeftAt().isEqual(attendance.getLastJoinedAt()))) {
-            throw new UnauthorizedException("You have already left the meeting.");
+            // Already left - this is OK, just return success (meeting may have been ended
+            // by lecturer)
+            return;
         }
 
         LocalDateTime now = LocalDateTime.now();
