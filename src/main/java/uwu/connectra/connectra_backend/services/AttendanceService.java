@@ -28,11 +28,11 @@ public class AttendanceService {
 
     /**
      * Record student attendance when joining a meeting.
-     * Uses REQUIRES_NEW to isolate this transaction - if duplicate error occurs,
-     * just return success since attendance IS recorded (by concurrent request).
-     * noRollbackFor prevents Spring from rolling back when duplicate key occurs.
+     * Uses REQUIRES_NEW to isolate this transaction.
+     * IF duplicate key error occurs, it causes this inner transaction to rollback.
+     * The caller (MeetingService) must catch the exception and ignore it.
      */
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, noRollbackFor = org.springframework.dao.DataIntegrityViolationException.class)
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
@@ -43,20 +43,12 @@ public class AttendanceService {
 
         if (attendance == null) {
             // Create new attendance record
-            try {
-                attendance = new Attendance();
-                attendance.setStudent(currentStudent);
-                attendance.setMeeting(meeting);
-                attendance.setJoinedAt(now);
-                attendance.setLastJoinedAt(now);
-                attendanceRepository.saveAndFlush(attendance);
-                // Successfully created
-            } catch (org.springframework.dao.DataIntegrityViolationException e) {
-                // Duplicate key error - another concurrent request already created the record
-                // This is NOT an error - attendance was successfully recorded by the other
-                // request
-                // Just return success - the goal (attendance recorded) is achieved
-            }
+            attendance = new Attendance();
+            attendance.setStudent(currentStudent);
+            attendance.setMeeting(meeting);
+            attendance.setJoinedAt(now);
+            attendance.setLastJoinedAt(now);
+            attendanceRepository.save(attendance);
             return;
         }
 
