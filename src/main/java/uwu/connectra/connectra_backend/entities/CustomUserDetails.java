@@ -47,4 +47,18 @@ public class CustomUserDetails implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
+    /**
+     * Get the user's ID.
+     */
+    public Long getId() {
+        return user.getId();
+    }
+
+    /**
+     * Get the underlying User entity.
+     */
+    public User getUser() {
+        return user;
+    }
 }
