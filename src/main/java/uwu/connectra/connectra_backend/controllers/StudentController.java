@@ -5,16 +5,19 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
 import uwu.connectra.connectra_backend.dtos.StudentAttendanceHistoryResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
+import uwu.connectra.connectra_backend.dtos.quiz.ActiveQuizResponseDTO;
+import uwu.connectra.connectra_backend.dtos.quiz.SubmitQuizResponseDTO;
 import uwu.connectra.connectra_backend.entities.AttendanceStatus;
+import uwu.connectra.connectra_backend.entities.CustomUserDetails;
 import uwu.connectra.connectra_backend.services.AttendanceService;
 import uwu.connectra.connectra_backend.services.MeetingService;
+import uwu.connectra.connectra_backend.services.QuizService;
 
 import java.util.List;
 
@@ -23,38 +26,67 @@ import java.util.List;
 @RequestMapping("/api/student")
 @Tag(name = "Student Controller", description = "Endpoints for student-specific operations")
 public class StudentController {
-    private final MeetingService meetingService;
-    private final AttendanceService attendanceService;
+        private final MeetingService meetingService;
+        private final AttendanceService attendanceService;
+        private final QuizService quizService;
 
-    // GET ALL SCHEDULED/LIVE MEETINGS FOR CURRENT STUDENT'S DEGREE AND BATCH
-    @PreAuthorize("hasRole('STUDENT')")
-    @GetMapping("/meetings")
-    @Operation(summary = "Get all scheduled/live meetings for the current student's degree and batch")
-    public ResponseEntity<ApiResponse<List<MeetingResponseDTO>>> getMyMeetings() {
-        List<MeetingResponseDTO> meetings = meetingService.getStudentMeetings();
+        // GET ALL SCHEDULED/LIVE MEETINGS FOR CURRENT STUDENT'S DEGREE AND BATCH
+        @PreAuthorize("hasRole('STUDENT')")
+        @GetMapping("/meetings")
+        @Operation(summary = "Get all scheduled/live meetings for the current student's degree and batch")
+        public ResponseEntity<ApiResponse<List<MeetingResponseDTO>>> getMyMeetings() {
+                List<MeetingResponseDTO> meetings = meetingService.getStudentMeetings();
 
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Meetings retrieved successfully.",
-                meetings));
-    }
+                return ResponseEntity.ok(new ApiResponse<>(
+                                true,
+                                "Meetings retrieved successfully.",
+                                meetings));
+        }
 
-    // GET ATTENDANCE HISTORY FOR CURRENT STUDENT
-    @PreAuthorize("hasRole('STUDENT')")
-    @GetMapping("/attendance/history")
-    @Operation(
-            summary = "Get attendance history for the current student",
-            description = "Returns all completed meetings for the student's degree/batch with detailed attendance information. "
-                    +
-                    "Includes both attended and missed meetings. Supports filtering by attendance status."
-    )
-    public ResponseEntity<ApiResponse<List<StudentAttendanceHistoryResponseDTO>>> getMyAttendanceHistory(
-            @RequestParam(required = false) AttendanceStatus status) {
-        List<StudentAttendanceHistoryResponseDTO> attendanceHistory = attendanceService
-                .getStudentAttendanceHistory(status);
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Attendance history retrieved successfully.",
-                attendanceHistory));
-    }
+        // GET ATTENDANCE HISTORY FOR CURRENT STUDENT
+        @PreAuthorize("hasRole('STUDENT')")
+        @GetMapping("/attendance/history")
+        @Operation(summary = "Get attendance history for the current student", description = "Returns all completed meetings for the student's degree/batch with detailed attendance information. "
+                        +
+                        "Includes both attended and missed meetings. Supports filtering by attendance status.")
+        public ResponseEntity<ApiResponse<List<StudentAttendanceHistoryResponseDTO>>> getMyAttendanceHistory(
+                        @RequestParam(required = false) AttendanceStatus status) {
+                List<StudentAttendanceHistoryResponseDTO> attendanceHistory = attendanceService
+                                .getStudentAttendanceHistory(status);
+                return ResponseEntity.ok(new ApiResponse<>(
+                                true,
+                                "Attendance history retrieved successfully.",
+                                attendanceHistory));
+        }
+
+        // ===== QUIZ ENDPOINTS =====
+
+        // Get active quiz for a meeting
+        @PreAuthorize("hasRole('STUDENT')")
+        @GetMapping("/meetings/{meetingId}/quiz/active")
+        @Operation(summary = "Get the currently active quiz for a meeting")
+        public ResponseEntity<ApiResponse<ActiveQuizResponseDTO>> getActiveQuiz(@PathVariable String meetingId) {
+                return ResponseEntity.ok(new ApiResponse<>(
+                                true,
+                                "Active quiz retrieved successfully.",
+                                quizService.getActiveQuizForMeeting(meetingId)));
+        }
+
+        // Submit quiz response
+        @PreAuthorize("hasRole('STUDENT')")
+        @PostMapping("/quizzes/{quizId}/respond")
+        @Operation(summary = "Submit a response to an active quiz")
+        public ResponseEntity<ApiResponse<String>> submitQuizResponse(
+                        @PathVariable Long quizId,
+                        @RequestBody @Validated SubmitQuizResponseDTO request) {
+                CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
+                                .getAuthentication().getPrincipal();
+                Long studentId = userDetails.getId();
+
+                quizService.submitResponse(quizId, studentId, request.getSelectedAnswer());
+                return ResponseEntity.ok(new ApiResponse<>(
+                                true,
+                                "Response submitted successfully.",
+                                null));
+        }
 }
