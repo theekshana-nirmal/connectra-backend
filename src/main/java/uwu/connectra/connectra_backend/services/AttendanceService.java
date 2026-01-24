@@ -26,42 +26,47 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final MeetingRepository meetingRepository;
 
-    /**
-     * Record student attendance when joining a meeting.
-     * If duplicate error occurs (concurrent requests), just return success since
-     * attendance IS recorded by the other request.
-     * noRollbackFor prevents Spring from rolling back when duplicate key occurs.
-     */
-    @Transactional(noRollbackFor = org.springframework.dao.DataIntegrityViolationException.class)
+    // Lock map to prevent concurrent attendance creation for the same
+    // student+meeting
+    private final java.util.concurrent.ConcurrentHashMap<String, Object> attendanceLocks = new java.util.concurrent.ConcurrentHashMap<>();
+
+    // Update student attendance on join
+    @Transactional
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
 
-        // Check if attendance already exists
-        Attendance attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
-                .orElse(null);
+        // Create a lock key for this student-meeting combination
+        String lockKey = currentStudent.getId() + "-" + meeting.getMeetingId().toString();
+        Object lock = attendanceLocks.computeIfAbsent(lockKey, k -> new Object());
 
-        if (attendance == null) {
-            // Create new attendance record
+        synchronized (lock) {
             try {
-                attendance = new Attendance();
-                attendance.setStudent(currentStudent);
-                attendance.setMeeting(meeting);
-                attendance.setJoinedAt(now);
-                attendance.setLastJoinedAt(now);
-                attendanceRepository.save(attendance); // Don't use saveAndFlush - it corrupts session on error
-            } catch (org.springframework.dao.DataIntegrityViolationException e) {
-                // Duplicate key - another request already created it
-                // Just return - attendance is recorded successfully (by other request)
-                return;
-            }
-            return;
-        }
+                // Check if attendance already exists
+                Attendance attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
+                        .orElse(null);
 
-        // Update existing record (if user rejoins)
-        autoLeaveStudentIfStillInMeeting(now, attendance);
-        attendance.setLastJoinedAt(now);
-        attendanceRepository.save(attendance);
+                if (attendance == null) {
+                    // Create new attendance record
+                    attendance = new Attendance();
+                    attendance.setStudent(currentStudent);
+                    attendance.setMeeting(meeting);
+                    attendance.setJoinedAt(now);
+                    attendance.setLastJoinedAt(now);
+                    attendanceRepository.saveAndFlush(attendance);
+                } else {
+                    // If user is already in the meeting (hasn't left yet), auto-leave them first
+                    autoLeaveStudentIfStillInMeeting(now, attendance);
+
+                    // Update lastJoinedAt for existing record
+                    attendance.setLastJoinedAt(now);
+                    attendanceRepository.save(attendance);
+                }
+            } finally {
+                // Clean up lock entry to prevent memory leak
+                attendanceLocks.remove(lockKey);
+            }
+        }
     }
 
     // Update student attendance on leave and calculate total duration
@@ -78,14 +83,11 @@ public class AttendanceService {
             throw new UnauthorizedException("You have not joined the meeting yet.");
         }
 
-        // Check if user has already left after their last join - if so, just return
-        // (idempotent)
+        // Check if user has already left after their last join
         if (attendance.getLeftAt() != null &&
                 (attendance.getLeftAt().isAfter(attendance.getLastJoinedAt())
                         || attendance.getLeftAt().isEqual(attendance.getLastJoinedAt()))) {
-            // Already left - this is OK, just return success (meeting may have been ended
-            // by lecturer)
-            return;
+            throw new UnauthorizedException("You have already left the meeting.");
         }
 
         LocalDateTime now = LocalDateTime.now();
