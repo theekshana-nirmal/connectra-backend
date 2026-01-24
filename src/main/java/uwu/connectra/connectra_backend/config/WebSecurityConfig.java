@@ -27,81 +27,77 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class WebSecurityConfig {
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final UserDetailsService userDetailsService;
-    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
-    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final UserDetailsService userDetailsService;
+        private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+        private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(urlBasedCorsConfigurationSource()))
-                .sessionManagement(
-                        session -> session
-                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(
-                        request -> request
-                                .requestMatchers(
-                                        "/api/auth/**",
-                                        "/swagger-ui/**",
-                                        "/v3/api-docs/**",
-                                        "/swagger-ui.html")
-                                .permitAll()
-                                .requestMatchers("/api/student/**").hasAnyRole("STUDENT", "ADMIN")
-                                .requestMatchers("/api/lecturer/**").hasAnyRole("LECTURER", "ADMIN")
-                                .anyRequest()
-                                .authenticated()
-                )
-                .exceptionHandling(
-                        exception -> exception
-                                .authenticationEntryPoint(customAuthenticationEntryPoint)
-                                .accessDeniedHandler(customAccessDeniedHandler)
-                )
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        return httpSecurity.build();
-    }
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+                httpSecurity
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .cors(cors -> cors.configurationSource(urlBasedCorsConfigurationSource()))
+                                .sessionManagement(
+                                                session -> session
+                                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(
+                                                request -> request
+                                                                .requestMatchers(
+                                                                                "/api/auth/**",
+                                                                                "/swagger-ui/**",
+                                                                                "/v3/api-docs/**",
+                                                                                "/swagger-ui.html")
+                                                                .permitAll()
+                                                                .requestMatchers("/api/student/**")
+                                                                .hasAnyRole("STUDENT", "ADMIN")
+                                                                .requestMatchers("/api/lecturers/**")
+                                                                .hasAnyRole("LECTURER", "ADMIN")
+                                                                .anyRequest()
+                                                                .authenticated())
+                                .exceptionHandling(
+                                                exception -> exception
+                                                                .authenticationEntryPoint(
+                                                                                customAuthenticationEntryPoint)
+                                                                .accessDeniedHandler(customAccessDeniedHandler))
+                                .authenticationProvider(authenticationProvider())
+                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                return httpSecurity.build();
+        }
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider(userDetailsService);
-        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder());
-        return daoAuthenticationProvider;
-    }
+        @Bean
+        public AuthenticationProvider authenticationProvider() {
+                DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider(userDetailsService);
+                daoAuthenticationProvider.setPasswordEncoder(passwordEncoder());
+                return daoAuthenticationProvider;
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
-            throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
+                        throws Exception {
+                return authenticationConfiguration.getAuthenticationManager();
+        }
 
-    @Bean
-    public UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
-                        "http://localhost:3000",
-                        "http://localhost:3001",
-                        "http://localhost:5173"
-                )
-        );
-        configuration.setAllowedMethods(List.of(
-                "GET",
-                "POST",
-                "PUT",
-                "DELETE",
-                "OPTIONS"
-        ));
-        configuration.addAllowedHeader("*");
-        configuration.addExposedHeader("Authorization");
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+        @Bean
+        public UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+                // Allow all origins for Electron desktop app (works in dev and production)
+                configuration.setAllowedOriginPatterns(List.of("*"));
+                configuration.setAllowedMethods(List.of(
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "DELETE",
+                                "OPTIONS"));
+                configuration.addAllowedHeader("*");
+                configuration.addExposedHeader("Authorization");
+                configuration.setAllowCredentials(true);
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }
