@@ -28,11 +28,11 @@ public class AttendanceService {
 
     /**
      * Record student attendance when joining a meeting.
-     * If duplicate error occurs (concurrent requests), just return success since
-     * attendance IS recorded by the other request.
-     * noRollbackFor prevents Spring from rolling back when duplicate key occurs.
+     * Uses REQUIRES_NEW to isolate this transaction.
+     * IF duplicate key error occurs, it causes this inner transaction to rollback.
+     * The caller (MeetingService) must catch the exception and ignore it.
      */
-    @Transactional(noRollbackFor = org.springframework.dao.DataIntegrityViolationException.class)
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
@@ -43,18 +43,12 @@ public class AttendanceService {
 
         if (attendance == null) {
             // Create new attendance record
-            try {
-                attendance = new Attendance();
-                attendance.setStudent(currentStudent);
-                attendance.setMeeting(meeting);
-                attendance.setJoinedAt(now);
-                attendance.setLastJoinedAt(now);
-                attendanceRepository.save(attendance); // Don't use saveAndFlush - it corrupts session on error
-            } catch (org.springframework.dao.DataIntegrityViolationException e) {
-                // Duplicate key - another request already created it
-                // Just return - attendance is recorded successfully (by other request)
-                return;
-            }
+            attendance = new Attendance();
+            attendance.setStudent(currentStudent);
+            attendance.setMeeting(meeting);
+            attendance.setJoinedAt(now);
+            attendance.setLastJoinedAt(now);
+            attendanceRepository.save(attendance);
             return;
         }
 
