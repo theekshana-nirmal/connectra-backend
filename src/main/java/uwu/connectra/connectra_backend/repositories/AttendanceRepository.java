@@ -1,6 +1,10 @@
 package uwu.connectra.connectra_backend.repositories;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import uwu.connectra.connectra_backend.entities.Attendance;
 import uwu.connectra.connectra_backend.entities.AttendanceStatus;
@@ -14,6 +18,13 @@ import java.util.Optional;
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     // Find by Student and Meeting
     Optional<Attendance> findByStudentAndMeeting(Student student, Meeting meeting);
+
+    // Find by Student and Meeting with pessimistic lock to prevent race conditions
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Attendance a WHERE a.student = :student AND a.meeting = :meeting")
+    Optional<Attendance> findByStudentAndMeetingWithLock(
+            @Param("student") Student student,
+            @Param("meeting") Meeting meeting);
 
     // Get all Attendance records for a Meeting
     List<Attendance> findAllByMeeting(Meeting meeting);
