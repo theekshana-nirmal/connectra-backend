@@ -28,11 +28,11 @@ public class AttendanceService {
 
     /**
      * Record student attendance when joining a meeting.
-     * Uses REQUIRES_NEW to isolate this transaction - if duplicate error occurs,
-     * just return success since attendance IS recorded (by concurrent request).
+     * If duplicate error occurs (concurrent requests), just return success since
+     * attendance IS recorded by the other request.
      * noRollbackFor prevents Spring from rolling back when duplicate key occurs.
      */
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, noRollbackFor = org.springframework.dao.DataIntegrityViolationException.class)
+    @Transactional(noRollbackFor = org.springframework.dao.DataIntegrityViolationException.class)
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
@@ -49,13 +49,11 @@ public class AttendanceService {
                 attendance.setMeeting(meeting);
                 attendance.setJoinedAt(now);
                 attendance.setLastJoinedAt(now);
-                attendanceRepository.saveAndFlush(attendance);
-                // Successfully created
+                attendanceRepository.save(attendance); // Don't use saveAndFlush - it corrupts session on error
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
-                // Duplicate key error - another concurrent request already created the record
-                // This is NOT an error - attendance was successfully recorded by the other
-                // request
-                // Just return success - the goal (attendance recorded) is achieved
+                // Duplicate key - another request already created it
+                // Just return - attendance is recorded successfully (by other request)
+                return;
             }
             return;
         }
