@@ -1,279 +1,280 @@
 package uwu.connectra.connectra_backend.services;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import uwu.connectra.connectra_backend.config.QuizResponseStorage;
 import uwu.connectra.connectra_backend.dtos.quiz.*;
-import uwu.connectra.connectra_backend.entities.*;
-import uwu.connectra.connectra_backend.exceptions.*;
+import uwu.connectra.connectra_backend.entities.CorrectAnswer;
+import uwu.connectra.connectra_backend.entities.Meeting;
+import uwu.connectra.connectra_backend.entities.Quiz;
+import uwu.connectra.connectra_backend.exceptions.ResourceNotFoundException;
+import uwu.connectra.connectra_backend.exceptions.BadRequestException;
 import uwu.connectra.connectra_backend.repositories.MeetingRepository;
 import uwu.connectra.connectra_backend.repositories.QuizRepository;
-import uwu.connectra.connectra_backend.repositories.StudentRepository;
-import uwu.connectra.connectra_backend.utils.CurrentUserProvider;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * Service for managing quiz operations.
+ * Quiz responses are stored in-memory (not persisted to database).
+ */
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class QuizService {
-
     private final QuizRepository quizRepository;
     private final MeetingRepository meetingRepository;
-    private final StudentRepository studentRepository;
-    private final QuizResponseStorage responseStorage;
-    private final CurrentUserProvider currentUserProvider;
 
-    //  LECTURER: CREATE QUIZ
+    /**
+     * In-memory storage for quiz responses.
+     * Key: quizId, Value: Map of (studentId -> QuizResponseEntry)
+     */
+    private final ConcurrentHashMap<Long, ConcurrentHashMap<Long, QuizResponseEntry>> quizResponses = new ConcurrentHashMap<>();
+
+    /**
+     * Internal class to store quiz response data in memory.
+     */
+    private record QuizResponseEntry(Long studentId, CorrectAnswer selectedAnswer, LocalDateTime answeredAt,
+            boolean isCorrect) {
+    }
+
+    // ============ LECTURER OPERATIONS ============
+
+    /**
+     * Create a new quiz for a meeting.
+     */
     @Transactional
-    public QuizResponseDTO createQuiz(String meetingId, CreateQuizRequestDTO dto) {
-        Lecturer lecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
-        Meeting meeting = getMeetingById(meetingId);
-
-        validateMeetingOwnership(meeting, lecturer);
-        validateQuizOptions(dto);
+    public QuizResponseDTO createQuiz(String meetingId, CreateQuizRequestDTO request) {
+        UUID uuid = parseUUID(meetingId);
+        Meeting meeting = meetingRepository.findById(uuid)
+                .orElseThrow(() -> new ResourceNotFoundException("Meeting not found with ID: " + meetingId));
 
         Quiz quiz = new Quiz();
         quiz.setMeeting(meeting);
-        quiz.setQuestionText(dto.getQuestionText());
-        quiz.setOptionA(dto.getOptionA());
-        quiz.setOptionB(dto.getOptionB());
-        quiz.setOptionC(dto.getOptionC());
-        quiz.setOptionD(dto.getOptionD());
-        quiz.setCorrectAnswer(Character.toUpperCase(dto.getCorrectAnswer()));
-        quiz.setTimeLimitSeconds(dto.getTimeLimitSeconds());
-        quiz.setActive(false);
+        quiz.setQuestion(request.getQuestionText());
+        quiz.setOptionA(request.getOptionA());
+        quiz.setOptionB(request.getOptionB());
+        quiz.setOptionC(request.getOptionC());
+        quiz.setOptionD(request.getOptionD());
+        quiz.setCorrectAnswer(request.getCorrectAnswer());
+        quiz.setTimeLimitSeconds(request.getTimeLimitSeconds());
+        quiz.setIsActive(false);
 
-        Quiz saved = quizRepository.save(quiz);
-        return mapToDTO(saved);
+        Quiz savedQuiz = quizRepository.save(quiz);
+        return mapToQuizResponseDTO(savedQuiz);
     }
 
-    // LECTURER: LIST QUIZZES
-    public List<QuizResponseDTO> getQuizzesForMeeting(String meetingId) {
-        Lecturer lecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
-        Meeting meeting = getMeetingById(meetingId);
-        validateMeetingOwnership(meeting, lecturer); // Lecturer can only see their quizzes
-
-        return quizRepository.findByMeetingOrderByLaunchedAtDesc(meeting).stream()
-                .map(this::mapToDTO)
+    /**
+     * Get all quizzes for a meeting.
+     */
+    @Transactional(readOnly = true)
+    public List<QuizResponseDTO> getQuizzesByMeetingId(String meetingId) {
+        UUID uuid = parseUUID(meetingId);
+        List<Quiz> quizzes = quizRepository.findAllByMeetingMeetingIdOrderByCreatedAtDesc(uuid);
+        return quizzes.stream()
+                .map(this::mapToQuizResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    //  LECTURER: DELETE QUIZ
+    /**
+     * Launch a quiz (set it as active).
+     */
+    @Transactional
+    public void launchQuiz(Long quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
+
+        if (quiz.getIsActive()) {
+            throw new BadRequestException("Quiz is already active");
+        }
+
+        // Deactivate any other active quiz for this meeting
+        UUID meetingId = quiz.getMeeting().getMeetingId();
+        quizRepository.findByMeetingMeetingIdAndIsActiveTrue(meetingId)
+                .ifPresent(activeQuiz -> {
+                    activeQuiz.setIsActive(false);
+                    activeQuiz.setEndedAt(LocalDateTime.now());
+                    quizRepository.save(activeQuiz);
+                });
+
+        // Initialize in-memory response storage for this quiz
+        quizResponses.put(quizId, new ConcurrentHashMap<>());
+
+        quiz.setIsActive(true);
+        quiz.setLaunchedAt(LocalDateTime.now());
+        quiz.setEndedAt(null);
+        quizRepository.save(quiz);
+    }
+
+    /**
+     * End an active quiz.
+     */
+    @Transactional
+    public void endQuiz(Long quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
+
+        if (!quiz.getIsActive()) {
+            throw new BadRequestException("Quiz is not currently active");
+        }
+
+        quiz.setIsActive(false);
+        quiz.setEndedAt(LocalDateTime.now());
+        quizRepository.save(quiz);
+    }
+
+    /**
+     * Get quiz results summary.
+     */
+    @Transactional(readOnly = true)
+    public QuizResultsSummaryDTO getQuizResults(Long quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
+
+        ConcurrentHashMap<Long, QuizResponseEntry> responses = quizResponses.getOrDefault(quizId,
+                new ConcurrentHashMap<>());
+
+        int totalResponses = responses.size();
+        int correctResponses = 0;
+        int optionACount = 0;
+        int optionBCount = 0;
+        int optionCCount = 0;
+        int optionDCount = 0;
+
+        for (QuizResponseEntry entry : responses.values()) {
+            if (entry.isCorrect())
+                correctResponses++;
+            switch (entry.selectedAnswer()) {
+                case A -> optionACount++;
+                case B -> optionBCount++;
+                case C -> optionCCount++;
+                case D -> optionDCount++;
+            }
+        }
+
+        return new QuizResultsSummaryDTO(
+                totalResponses,
+                correctResponses,
+                optionACount,
+                optionBCount,
+                optionCCount,
+                optionDCount,
+                quiz.getCorrectAnswer());
+    }
+
+    /**
+     * Delete a quiz.
+     */
     @Transactional
     public void deleteQuiz(Long quizId) {
-        Lecturer lecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
-        Quiz quiz = getQuizById(quizId);
-        validateMeetingOwnership(quiz.getMeeting(), lecturer);
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
 
-        if (quiz.isActive()) {
-            throw new IllegalArgumentException("Cannot delete an active quiz.");
+        if (quiz.getIsActive()) {
+            throw new BadRequestException("Cannot delete an active quiz. End it first.");
         }
+
+        // Clean up in-memory responses
+        quizResponses.remove(quizId);
         quizRepository.delete(quiz);
     }
 
-    // LECTURER: LAUNCH QUIZ
-    @Transactional
-    public QuizResponseDTO launchQuiz(Long quizId) {
-        Lecturer lecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
-        Quiz quiz = getQuizById(quizId);
-        Meeting meeting = quiz.getMeeting();
+    // ============ STUDENT OPERATIONS ============
 
-        validateMeetingOwnership(meeting, lecturer);
+    /**
+     * Get the active quiz for a meeting (student view).
+     */
+    @Transactional(readOnly = true)
+    public ActiveQuizResponseDTO getActiveQuizForMeeting(String meetingId) {
+        UUID uuid = parseUUID(meetingId);
+        Quiz activeQuiz = quizRepository.findByMeetingMeetingIdAndIsActiveTrue(uuid)
+                .orElseThrow(() -> new ResourceNotFoundException("No active quiz found for this meeting"));
 
-        if (meeting.getStatus() != MeetingStatus.LIVE) {
-            throw new IllegalStateException("Quiz can only be launched during a LIVE meeting.");
+        // Calculate remaining time
+        int timeRemainingSeconds = calculateTimeRemaining(activeQuiz);
+        if (timeRemainingSeconds <= 0) {
+            // Auto-end the quiz if time has expired
+            activeQuiz.setIsActive(false);
+            activeQuiz.setEndedAt(LocalDateTime.now());
+            quizRepository.save(activeQuiz);
+            throw new ResourceNotFoundException("No active quiz found for this meeting");
         }
 
-        // Check if another quiz is active
-        if (quizRepository.findByMeetingAndIsActiveTrue(meeting).isPresent()) {
-            throw new IllegalStateException("Another quiz is currently active in this meeting.");
-        }
-
-        quiz.setActive(true);
-        quiz.setLaunchedAt(LocalDateTime.now());
-        quiz.setEndedAt(null); // Reset ended at if re-launching
-
-        // Clear old responses for this quiz from memory
-        responseStorage.clearResponsesForQuiz(quizId);
-
-        Quiz saved = quizRepository.save(quiz);
-        return mapToDTO(saved);
+        return new ActiveQuizResponseDTO(
+                activeQuiz.getId(),
+                activeQuiz.getQuestion(),
+                activeQuiz.getOptionA(),
+                activeQuiz.getOptionB(),
+                activeQuiz.getOptionC(),
+                activeQuiz.getOptionD(),
+                timeRemainingSeconds);
     }
 
-    //  LECTURER: END QUIZ
+    /**
+     * Submit a student's response to a quiz.
+     */
     @Transactional
-    public QuizResponseDTO endQuiz(Long quizId) {
-        Lecturer lecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
-        Quiz quiz = getQuizById(quizId);
-        validateMeetingOwnership(quiz.getMeeting(), lecturer);
+    public void submitResponse(Long quizId, Long studentId, CorrectAnswer selectedAnswer) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
 
-        if (!quiz.isActive()) {
-            throw new IllegalStateException("Quiz is not currently active.");
+        if (!quiz.getIsActive()) {
+            throw new BadRequestException("This quiz is no longer active");
         }
 
-        quiz.setActive(false);
-        quiz.setEndedAt(LocalDateTime.now());
-
-        Quiz saved = quizRepository.save(quiz);
-        return mapToDTO(saved);
-    }
-
-    // STUDENT: GET ACTIVE QUIZ
-    public ActiveQuizDTO getActiveQuizForStudent(String meetingId) {
-        Student student = currentUserProvider.getCurrentUserAs(Student.class);
-        Meeting meeting = getMeetingById(meetingId);
-
-        validateStudentAccess(meeting, student);
-
-        Quiz activeQuiz = quizRepository.findByMeetingAndIsActiveTrue(meeting)
-                .orElseThrow(() -> new RuntimeException("No active quiz found for this meeting."));
-
-        // Calculate time remaining
-        long secondsElapsed = Duration.between(activeQuiz.getLaunchedAt(), LocalDateTime.now()).getSeconds();
-        long timeRemaining = activeQuiz.getTimeLimitSeconds() - secondsElapsed;
-
+        // Check if time has expired
+        int timeRemaining = calculateTimeRemaining(quiz);
         if (timeRemaining <= 0) {
-            // Auto-close logic could be triggered here or lazily
-            throw new RuntimeException("Quiz time has expired.");
+            throw new BadRequestException("Time has expired for this quiz");
         }
 
-        ActiveQuizDTO dto = new ActiveQuizDTO();
-        dto.setId(activeQuiz.getId());
-        dto.setQuestionText(activeQuiz.getQuestionText());
-        dto.setOptionA(activeQuiz.getOptionA());
-        dto.setOptionB(activeQuiz.getOptionB());
-        dto.setOptionC(activeQuiz.getOptionC());
-        dto.setOptionD(activeQuiz.getOptionD());
-        dto.setTimeLimitSeconds(activeQuiz.getTimeLimitSeconds());
-        dto.setLaunchedAt(activeQuiz.getLaunchedAt());
-        dto.setTimeRemainingSeconds(timeRemaining);
+        // Get or create the response map for this quiz
+        ConcurrentHashMap<Long, QuizResponseEntry> responses = quizResponses.computeIfAbsent(quizId,
+                k -> new ConcurrentHashMap<>());
 
-        return dto;
-    }
-
-    // STUDENT: SUBMIT RESPONSE
-    public void submitResponse(Long quizId, SubmitQuizResponseDTO dto) {
-        Student student = currentUserProvider.getCurrentUserAs(Student.class);
-        Quiz quiz = getQuizById(quizId);
-
-        if (!quiz.isActive()) {
-            throw new IllegalStateException("Quiz is no longer active.");
+        // Check if student has already responded
+        if (responses.containsKey(studentId)) {
+            throw new BadRequestException("You have already submitted a response for this quiz");
         }
 
-        // Double check time validity
-        long secondsElapsed = Duration.between(quiz.getLaunchedAt(), LocalDateTime.now()).getSeconds();
-        if (secondsElapsed > quiz.getTimeLimitSeconds()) {
-            throw new IllegalStateException("Time limit exceeded.");
-        }
-
-        // Validate Answer Char
-        Character answer = Character.toUpperCase(dto.getSelectedAnswer());
-        if (!Arrays.asList('A', 'B', 'C', 'D').contains(answer)) {
-            throw new IllegalArgumentException("Invalid answer option.");
-        }
-
-        responseStorage.addResponse(quizId, student.getId(), answer);
+        // Record the response
+        boolean isCorrect = selectedAnswer == quiz.getCorrectAnswer();
+        responses.put(studentId, new QuizResponseEntry(studentId, selectedAnswer, LocalDateTime.now(), isCorrect));
     }
 
-    // LECTURER: GET RESULTS
-    public QuizResultsSummaryDTO getQuizResults(Long quizId) {
-        Lecturer lecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
-        Quiz quiz = getQuizById(quizId);
-        validateMeetingOwnership(quiz.getMeeting(), lecturer);
+    // ============ HELPER METHODS ============
 
-        List<QuizResponseStorage.QuizResponse> responses = responseStorage.getResponsesForQuiz(quizId)
-                .toList();
-
-        long totalResponses = responses.size();
-        long correctCount = responses.stream()
-                .filter(r -> r.getSelectedAnswer().equals(quiz.getCorrectAnswer()))
-                .count();
-        long incorrectCount = totalResponses - correctCount;
-
-        Map<Character, Long> breakdown = new HashMap<>();
-        breakdown.put('A', responses.stream().filter(r -> r.getSelectedAnswer() == 'A').count());
-        breakdown.put('B', responses.stream().filter(r -> r.getSelectedAnswer() == 'B').count());
-        breakdown.put('C', responses.stream().filter(r -> r.getSelectedAnswer() == 'C').count());
-        breakdown.put('D', responses.stream().filter(r -> r.getSelectedAnswer() == 'D').count());
-
-        // Calculate Expected Students
-        long expectedStudents = studentRepository.countByDegreeAndBatch(
-                quiz.getMeeting().getTargetDegree(),
-                quiz.getMeeting().getTargetBatch()
-        );
-
-        double responseRate = expectedStudents > 0 ? ((double) totalResponses / expectedStudents) * 100 : 0;
-
-        QuizResultsSummaryDTO summary = new QuizResultsSummaryDTO();
-        summary.setQuizId(quizId);
-        summary.setQuestionText(quiz.getQuestionText());
-        summary.setCorrectAnswer(quiz.getCorrectAnswer());
-        summary.setTotalStudentsInMeeting(expectedStudents);
-        summary.setTotalResponses(totalResponses);
-        summary.setCorrectCount(correctCount);
-        summary.setIncorrectCount(incorrectCount);
-        summary.setResponseRate(responseRate);
-        summary.setResponseBreakdown(breakdown);
-
-        return summary;
-    }
-    // helper methods
-
-    private Meeting getMeetingById(String meetingId) {
-        return meetingRepository.findById(UUID.fromString(meetingId))
-                .orElseThrow(() -> new MeetingNotFoundException("Meeting not found"));
-    }
-
-    private Quiz getQuizById(Long quizId) {
-        return quizRepository.findById(quizId)
-                .orElseThrow(() -> new RuntimeException("Quiz not found"));
-    }
-
-    private void validateMeetingOwnership(Meeting meeting, Lecturer lecturer) {
-        // CORRECTED: Use != operator for primitive long comparison
-        if (meeting.getCreatedBy().getId() != lecturer.getId()) {
-            throw new UnauthorizedException("You do not have permission to access quizzes for this meeting.");
+    private UUID parseUUID(String meetingId) {
+        try {
+            return UUID.fromString(meetingId);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid meeting ID format");
         }
     }
 
-    private void validateStudentAccess(Meeting meeting, Student student) {
-        if (!meeting.getTargetDegree().equalsIgnoreCase(student.getDegree()) ||
-                meeting.getTargetBatch() != student.getBatch()) {
-            throw new UnauthorizedException("You are not authorized to view this quiz.");
-        }
+    private int calculateTimeRemaining(Quiz quiz) {
+        if (quiz.getLaunchedAt() == null)
+            return 0;
+        LocalDateTime expiresAt = quiz.getLaunchedAt().plusSeconds(quiz.getTimeLimitSeconds());
+        long secondsRemaining = Duration.between(LocalDateTime.now(), expiresAt).getSeconds();
+        return (int) Math.max(0, secondsRemaining);
     }
 
-    private void validateQuizOptions(CreateQuizRequestDTO dto) {
-        Character correct = Character.toUpperCase(dto.getCorrectAnswer());
-        if (!Arrays.asList('A', 'B', 'C', 'D').contains(correct)) {
-            throw new IllegalArgumentException("Correct answer must be A, B, C, or D.");
-        }
-
-        List<Integer> validTimes = Arrays.asList(30, 60, 120);
-        if(!validTimes.contains(dto.getTimeLimitSeconds())) {
-            throw new IllegalArgumentException("Time limit must be 30, 60 or 120 seconds.");
-        }
-    }
-
-    private QuizResponseDTO mapToDTO(Quiz quiz) {
-        QuizResponseDTO dto = new QuizResponseDTO();
-        dto.setId(quiz.getId());
-        dto.setQuestionText(quiz.getQuestionText());
-        dto.setOptionA(quiz.getOptionA());
-        dto.setOptionB(quiz.getOptionB());
-        dto.setOptionC(quiz.getOptionC());
-        dto.setOptionD(quiz.getOptionD());
-        dto.setCorrectAnswer(quiz.getCorrectAnswer());
-        dto.setTimeLimitSeconds(quiz.getTimeLimitSeconds());
-        dto.setActive(quiz.isActive());
-        dto.setLaunchedAt(quiz.getLaunchedAt());
-        dto.setEndedAt(quiz.getEndedAt());
-        return dto;
+    private QuizResponseDTO mapToQuizResponseDTO(Quiz quiz) {
+        return new QuizResponseDTO(
+                quiz.getId(),
+                quiz.getQuestion(),
+                quiz.getOptionA(),
+                quiz.getOptionB(),
+                quiz.getOptionC(),
+                quiz.getOptionD(),
+                quiz.getCorrectAnswer(),
+                quiz.getTimeLimitSeconds(),
+                quiz.getIsActive(),
+                quiz.getCreatedAt());
     }
 }

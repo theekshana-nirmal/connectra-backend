@@ -1,61 +1,66 @@
 package uwu.connectra.connectra_backend.entities;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/**
+ * Entity representing a quiz question created by a lecturer during a meeting.
+ * Quizzes can be launched to test student engagement in real-time.
+ */
 @Entity
+@Table(name = "quiz")
+@NoArgsConstructor
 @Getter
 @Setter
-@NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 public class Quiz {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "meeting_id", nullable = false)
-    private Meeting meeting;
+    @Column(name = "question", nullable = false, length = 1000)
+    private String question;
 
-    @NotBlank
-    @Column(length = 500)
-    private String questionText;
-
-    @NotBlank
+    @Column(name = "optiona", nullable = false, length = 500)
     private String optionA;
 
-    @NotBlank
+    @Column(name = "optionb", nullable = false, length = 500)
     private String optionB;
 
+    @Column(name = "optionc", nullable = false, length = 500)
     private String optionC;
+
+    @Column(name = "optiond", nullable = false, length = 500)
     private String optionD;
 
-    @NotNull
-    private Character correctAnswer; // 'A', 'B', 'C', or 'D'
+    @Enumerated(EnumType.STRING)
+    @Column(name = "correct_answer", nullable = false)
+    private CorrectAnswer correctAnswer;
 
-    @NotNull
-    private Integer timeLimitSeconds; // 30, 60, 120
+    @Column(name = "time_limit_seconds", nullable = false)
+    private Integer timeLimitSeconds;
 
-    private boolean isActive = false;
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = false;
 
+    @Column(name = "launched_at")
     private LocalDateTime launchedAt;
+
+    @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
     @CreatedDate
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
+    // Relationship with Meeting
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "meeting_id", nullable = false)
+    private Meeting meeting;
 }

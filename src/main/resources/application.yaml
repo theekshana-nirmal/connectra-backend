@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     #database-platform: org.hibernate.dialect.PostgresSQLDialect
     open-in-view: false # Disabled DB queries run while returning JSON
 
