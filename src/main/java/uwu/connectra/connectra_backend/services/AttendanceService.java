@@ -80,11 +80,14 @@ public class AttendanceService {
             throw new UnauthorizedException("You have not joined the meeting yet.");
         }
 
-        // Check if user has already left after their last join
+        // Check if user has already left after their last join - if so, just return
+        // (idempotent)
         if (attendance.getLeftAt() != null &&
                 (attendance.getLeftAt().isAfter(attendance.getLastJoinedAt())
                         || attendance.getLeftAt().isEqual(attendance.getLastJoinedAt()))) {
-            throw new UnauthorizedException("You have already left the meeting.");
+            // Already left - this is OK, just return success (meeting may have been ended
+            // by lecturer)
+            return;
         }
 
         LocalDateTime now = LocalDateTime.now();
