@@ -1,0 +1,35 @@
+# .dockerignore - Files Docker should ignore
+
+# Git
+.git
+.gitignore
+
+# IDE files
+.idea
+*.iml
+.vscode
+*.swp
+*.swo
+
+# Build outputs (we rebuild inside Docker)
+target/
+
+# Environment files (we set these in Render)
+.env
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+!README.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Media files (if not needed for the app)
+media/

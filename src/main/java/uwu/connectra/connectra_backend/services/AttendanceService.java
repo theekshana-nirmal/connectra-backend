@@ -2,6 +2,7 @@ package uwu.connectra.connectra_backend.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import uwu.connectra.connectra_backend.dtos.StudentAttendanceDTO;
 import uwu.connectra.connectra_backend.dtos.StudentAttendanceHistoryResponseDTO;
 import uwu.connectra.connectra_backend.entities.*;
@@ -27,6 +28,7 @@ public class AttendanceService {
 
     // ====== HELPER METHODS ===== //
     // Update student attendance on join
+    @Transactional
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
@@ -46,10 +48,21 @@ public class AttendanceService {
 
         // Now join them again with new timestamp
         attendance.setLastJoinedAt(now);
-        attendanceRepository.save(attendance);
+
+        try {
+            attendanceRepository.save(attendance);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Race condition: another concurrent request already created the record
+            // Re-fetch the existing record and update it instead
+            attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
+                    .orElseThrow(() -> new RuntimeException("Failed to find attendance after constraint violation"));
+            attendance.setLastJoinedAt(now);
+            attendanceRepository.save(attendance);
+        }
     }
 
     // Update student attendance on leave and calculate total duration
+    @Transactional
     public void recordStudentAttendanceOnLeave(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
 
