@@ -30,8 +30,9 @@ public class AttendanceService {
      * Record student attendance when joining a meeting.
      * Uses REQUIRES_NEW to isolate this transaction - if duplicate error occurs,
      * just return success since attendance IS recorded (by concurrent request).
+     * noRollbackFor prevents Spring from rolling back when duplicate key occurs.
      */
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, noRollbackFor = org.springframework.dao.DataIntegrityViolationException.class)
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
