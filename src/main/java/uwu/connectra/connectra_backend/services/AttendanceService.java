@@ -26,47 +26,43 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final MeetingRepository meetingRepository;
 
-    // Lock map to prevent concurrent attendance creation for the same
-    // student+meeting
-    private final java.util.concurrent.ConcurrentHashMap<String, Object> attendanceLocks = new java.util.concurrent.ConcurrentHashMap<>();
-
-    // Update student attendance on join
-    @Transactional
+    /**
+     * Record student attendance when joining a meeting.
+     * Uses REQUIRES_NEW to isolate this transaction - if duplicate error occurs,
+     * just return success since attendance IS recorded (by concurrent request).
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void recordStudentAttendanceOnJoin(Meeting meeting) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
 
-        // Create a lock key for this student-meeting combination
-        String lockKey = currentStudent.getId() + "-" + meeting.getMeetingId().toString();
-        Object lock = attendanceLocks.computeIfAbsent(lockKey, k -> new Object());
+        // Check if attendance already exists
+        Attendance attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
+                .orElse(null);
 
-        synchronized (lock) {
+        if (attendance == null) {
+            // Create new attendance record
             try {
-                // Check if attendance already exists
-                Attendance attendance = attendanceRepository.findByStudentAndMeeting(currentStudent, meeting)
-                        .orElse(null);
-
-                if (attendance == null) {
-                    // Create new attendance record
-                    attendance = new Attendance();
-                    attendance.setStudent(currentStudent);
-                    attendance.setMeeting(meeting);
-                    attendance.setJoinedAt(now);
-                    attendance.setLastJoinedAt(now);
-                    attendanceRepository.saveAndFlush(attendance);
-                } else {
-                    // If user is already in the meeting (hasn't left yet), auto-leave them first
-                    autoLeaveStudentIfStillInMeeting(now, attendance);
-
-                    // Update lastJoinedAt for existing record
-                    attendance.setLastJoinedAt(now);
-                    attendanceRepository.save(attendance);
-                }
-            } finally {
-                // Clean up lock entry to prevent memory leak
-                attendanceLocks.remove(lockKey);
+                attendance = new Attendance();
+                attendance.setStudent(currentStudent);
+                attendance.setMeeting(meeting);
+                attendance.setJoinedAt(now);
+                attendance.setLastJoinedAt(now);
+                attendanceRepository.saveAndFlush(attendance);
+                // Successfully created
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                // Duplicate key error - another concurrent request already created the record
+                // This is NOT an error - attendance was successfully recorded by the other
+                // request
+                // Just return success - the goal (attendance recorded) is achieved
             }
+            return;
         }
+
+        // Update existing record (if user rejoins)
+        autoLeaveStudentIfStillInMeeting(now, attendance);
+        attendance.setLastJoinedAt(now);
+        attendanceRepository.save(attendance);
     }
 
     // Update student attendance on leave and calculate total duration
