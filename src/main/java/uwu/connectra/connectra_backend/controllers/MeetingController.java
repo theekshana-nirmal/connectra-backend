@@ -34,13 +34,13 @@ public class MeetingController {
     @PostMapping
     @PreAuthorize("hasAnyRole('LECTURER')")
     @Operation(summary = "Create a new meeting")
-    public ResponseEntity<ApiResponse<MeetingResponseDTO>> createMeeting(@RequestBody @Validated CreateMeetingRequestDTO request) {
+    public ResponseEntity<ApiResponse<MeetingResponseDTO>> createMeeting(
+            @RequestBody @Validated CreateMeetingRequestDTO request) {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(
                 true,
                 "Meeting created successfully.",
-                meetingService.createMeeting(request)
-        ));
+                meetingService.createMeeting(request)));
     }
 
     // Get all Meetings (created by the authenticated lecturer)
@@ -49,12 +49,9 @@ public class MeetingController {
     @Operation(summary = "Get all meetings created by the authenticated lecturer")
     public ResponseEntity<ApiResponse<List<MeetingResponseDTO>>> getAllMeetings() {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
-                        true,
-                        "Meetings retrieved successfully.",
-                        meetingService.getAllMeetings()
-                )
-                )
-        );
+                true,
+                "Meetings retrieved successfully.",
+                meetingService.getAllMeetings())));
     }
 
     // Get Meeting by its ID
@@ -65,22 +62,19 @@ public class MeetingController {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
                 true,
                 "Meeting retrieved successfully.",
-                meetingService.getMeetingById(meetingId)
-        )
-        ));
+                meetingService.getMeetingById(meetingId))));
     }
 
     // Update Meeting by its ID
     @PreAuthorize("hasAnyRole('LECTURER')")
     @PutMapping("/{meetingId}")
     @Operation(summary = "Update meeting details by its ID")
-    public ResponseEntity<ApiResponse<MeetingResponseDTO>> updateMeetingById(@PathVariable String meetingId, @RequestBody @Validated UpdateMeetingRequestDTO request) {
+    public ResponseEntity<ApiResponse<MeetingResponseDTO>> updateMeetingById(@PathVariable String meetingId,
+            @RequestBody @Validated UpdateMeetingRequestDTO request) {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
                 true,
                 "Meeting updated successfully.",
-                meetingService.updateMeetingById(meetingId, request)
-        )
-        ));
+                meetingService.updateMeetingById(meetingId, request))));
     }
 
     // Cancel Meeting by its ID
@@ -91,9 +85,7 @@ public class MeetingController {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
                 true,
                 "Meeting canceled successfully.",
-                meetingService.cancelMeetingById(meetingId)
-        )
-        ));
+                meetingService.cancelMeetingById(meetingId))));
     }
 
     // Join Meeting by its ID (Generate Agora Token)
@@ -102,12 +94,9 @@ public class MeetingController {
     @Operation(summary = "Generate Agora token to join meeting by its ID")
     public ResponseEntity<ApiResponse<AgoraTokenResponseDTO>> joinMeetingById(@PathVariable String meetingId) {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
-                        true,
-                        "Joined meeting successfully.",
-                        meetingService.joinMeeting(meetingId)
-                )
-                )
-        );
+                true,
+                "Joined meeting successfully.",
+                meetingService.joinMeeting(meetingId))));
     }
 
     // Leave Meeting by its ID
@@ -118,11 +107,8 @@ public class MeetingController {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
                 true,
                 "Left meeting successfully.",
-                meetingService.leaveMeeting(meetingId)
-        )
-        ));
+                meetingService.leaveMeeting(meetingId))));
     }
-
 
     // Stop Meeting by its ID
     @PreAuthorize("hasAnyRole('LECTURER')")
@@ -132,9 +118,7 @@ public class MeetingController {
         return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
                 true,
                 "Meeting stopped successfully.",
-                meetingService.stopMeeting(meetingId)
-        )
-        ));
+                meetingService.stopMeeting(meetingId))));
     }
 
     // ===== ATTENDANCE REPORTS ENDPOINTS =====
@@ -142,70 +126,85 @@ public class MeetingController {
     @PreAuthorize("hasAnyRole('LECTURER')")
     @GetMapping("/{meetingId}/attendance")
     @Operation(summary = "Get attendance report for a meeting by its ID")
-    public ResponseEntity<ApiResponse<AttendanceReportResponseDTO>> getAttendanceReport(@PathVariable String meetingId) {
+    public ResponseEntity<ApiResponse<AttendanceReportResponseDTO>> getAttendanceReport(
+            @PathVariable String meetingId) {
         AttendanceReportResponseDTO report = meetingService.generateAttendanceReport(meetingId);
         return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse<>(
                 true,
                 "Attendance report data generated successfully.",
-                report
-        ));
+                report));
     }
 
+    // ===== QUIZ ENDPOINTS =====
 
-    // QUIZ MANAGEMENT ENDPOINTS
+    // Get all quizzes for a meeting
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @GetMapping("/{meetingId}/quizzes")
+    @Operation(summary = "Get all quizzes for a meeting")
+    public ResponseEntity<ApiResponse<List<QuizResponseDTO>>> getQuizzes(@PathVariable String meetingId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Quizzes retrieved successfully.",
+                quizService.getQuizzesByMeetingId(meetingId)));
+    }
 
-    @PreAuthorize("hasRole('LECTURER')")
+    // Create a new quiz for a meeting
+    @PreAuthorize("hasAnyRole('LECTURER')")
     @PostMapping("/{meetingId}/quizzes")
     @Operation(summary = "Create a new quiz for a meeting")
     public ResponseEntity<ApiResponse<QuizResponseDTO>> createQuiz(
             @PathVariable String meetingId,
             @RequestBody @Validated CreateQuizRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>(
-                true, "Quiz created successfully",
+                true,
+                "Quiz created successfully.",
                 quizService.createQuiz(meetingId, request)));
     }
 
-    @PreAuthorize("hasRole('LECTURER')")
-    @GetMapping("/{meetingId}/quizzes")
-    @Operation(summary = "Get all quizzes for a meeting")
-    public ResponseEntity<ApiResponse<List<QuizResponseDTO>>> getQuizzes(@PathVariable String meetingId) {
-        return ResponseEntity.ok(new ApiResponse<>(
-                true, "Quizzes retrieved successfully",
-                quizService.getQuizzesForMeeting(meetingId)));
-    }
-
-    @PreAuthorize("hasRole('LECTURER')")
-    @DeleteMapping("/quizzes/{quizId}")
-    @Operation(summary = "Delete a quiz")
-    public ResponseEntity<ApiResponse<Void>> deleteQuiz(@PathVariable Long quizId) {
-        quizService.deleteQuiz(quizId);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Quiz deleted successfully", null));
-    }
-
-    @PreAuthorize("hasRole('LECTURER')")
+    // Launch a quiz
+    @PreAuthorize("hasAnyRole('LECTURER')")
     @PostMapping("/quizzes/{quizId}/launch")
-    @Operation(summary = "Launch a quiz (start timer)")
-    public ResponseEntity<ApiResponse<QuizResponseDTO>> launchQuiz(@PathVariable Long quizId) {
+    @Operation(summary = "Launch a quiz to make it active for students")
+    public ResponseEntity<ApiResponse<String>> launchQuiz(@PathVariable Long quizId) {
+        quizService.launchQuiz(quizId);
         return ResponseEntity.ok(new ApiResponse<>(
-                true, "Quiz launched successfully",
-                quizService.launchQuiz(quizId)));
+                true,
+                "Quiz launched successfully.",
+                null));
     }
 
-    @PreAuthorize("hasRole('LECTURER')")
+    // End a quiz
+    @PreAuthorize("hasAnyRole('LECTURER')")
     @PostMapping("/quizzes/{quizId}/end")
     @Operation(summary = "End an active quiz")
-    public ResponseEntity<ApiResponse<QuizResponseDTO>> endQuiz(@PathVariable Long quizId) {
+    public ResponseEntity<ApiResponse<String>> endQuiz(@PathVariable Long quizId) {
+        quizService.endQuiz(quizId);
         return ResponseEntity.ok(new ApiResponse<>(
-                true, "Quiz ended successfully",
-                quizService.endQuiz(quizId)));
+                true,
+                "Quiz ended successfully.",
+                null));
     }
 
-    @PreAuthorize("hasRole('LECTURER')")
+    // Get quiz results
+    @PreAuthorize("hasAnyRole('LECTURER')")
     @GetMapping("/quizzes/{quizId}/results")
-    @Operation(summary = "Get results for a quiz")
+    @Operation(summary = "Get quiz results summary")
     public ResponseEntity<ApiResponse<QuizResultsSummaryDTO>> getQuizResults(@PathVariable Long quizId) {
         return ResponseEntity.ok(new ApiResponse<>(
-                true, "Quiz results retrieved successfully",
+                true,
+                "Quiz results retrieved successfully.",
                 quizService.getQuizResults(quizId)));
+    }
+
+    // Delete a quiz
+    @PreAuthorize("hasAnyRole('LECTURER')")
+    @DeleteMapping("/quizzes/{quizId}")
+    @Operation(summary = "Delete a quiz")
+    public ResponseEntity<ApiResponse<String>> deleteQuiz(@PathVariable Long quizId) {
+        quizService.deleteQuiz(quizId);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Quiz deleted successfully.",
+                null));
     }
 }
