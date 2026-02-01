@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import uwu.connectra.connectra_backend.config.AgoraConfig;
 import uwu.connectra.connectra_backend.dtos.AgoraTokenResponseDTO;
 import uwu.connectra.connectra_backend.dtos.AttendanceReportResponseDTO;
+import uwu.connectra.connectra_backend.dtos.ParticipantDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
@@ -17,6 +18,7 @@ import uwu.connectra.connectra_backend.exceptions.MeetingAlreadyEndedException;
 import uwu.connectra.connectra_backend.exceptions.MeetingCancelledException;
 import uwu.connectra.connectra_backend.exceptions.MeetingNotFoundException;
 import uwu.connectra.connectra_backend.exceptions.UnauthorizedException;
+import uwu.connectra.connectra_backend.repositories.AttendanceRepository;
 import uwu.connectra.connectra_backend.repositories.MeetingRepository;
 import uwu.connectra.connectra_backend.repositories.StudentRepository;
 import uwu.connectra.connectra_backend.utils.AgoraTokenGenerator;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MeetingService {
     private final AttendanceService attendanceService;
+    private final AttendanceRepository attendanceRepository;
     private final MeetingRepository meetingRepository;
     private final StudentRepository studentRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -130,10 +133,13 @@ public class MeetingService {
         Meeting meeting = findMeetingById(meetingId);
         Role currentUserRole = currentUserProvider.getCurrentUserRole();
 
+        // Get UID first (needed for attendance tracking)
+        int agoraUid = agoraTokenGenerator.getCurrentUserUid();
+
         if (currentUserRole == Role.STUDENT) {
             validateStudentMeetingAccess(meeting);
             try {
-                attendanceService.recordStudentAttendanceOnJoin(meeting);
+                attendanceService.recordStudentAttendanceOnJoin(meeting, agoraUid);
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
                 // Ignore duplicate attendance record (race condition)
                 log.debug("Concurrent attendance recording detected for student in meeting {}", meetingId);
@@ -459,6 +465,56 @@ public class MeetingService {
         responseDTO.setUId(agoraTokenGenerator.getCurrentUserUid());
         responseDTO.setChannelName(meeting.getAgoraChannelName());
 
+        // Get current user's name and role
+        Role currentUserRole = currentUserProvider.getCurrentUserRole();
+        String userName;
+        boolean isHost;
+
+        if (currentUserRole == Role.LECTURER) {
+            Lecturer lecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
+            userName = lecturer.getFirstName() + " " + lecturer.getLastName();
+            isHost = true;
+        } else {
+            Student student = currentUserProvider.getCurrentUserAs(Student.class);
+            userName = student.getFirstName() + " " + student.getLastName();
+            isHost = false;
+        }
+
+        responseDTO.setUserName(userName);
+        responseDTO.setHost(isHost);
+
         return responseDTO;
+    }
+
+    // Get active participants for a meeting (for name sync)
+    @Transactional(readOnly = true)
+    public List<ParticipantDTO> getActiveParticipants(String meetingId) {
+        Meeting meeting = findMeetingById(meetingId);
+        List<ParticipantDTO> participants = new java.util.ArrayList<>();
+
+        // Add lecturer (host)
+        Lecturer lecturer = meeting.getCreatedBy();
+        // Lecturer's agoraUid is their database ID (same as how token is generated)
+        ParticipantDTO lecturerParticipant = new ParticipantDTO();
+        lecturerParticipant.setAgoraUid((int) lecturer.getId());
+        lecturerParticipant.setDisplayName(lecturer.getFirstName() + " " + lecturer.getLastName());
+        lecturerParticipant.setHost(true);
+        participants.add(lecturerParticipant);
+
+        // Add students from attendance records - use repository with eager fetch
+        List<Attendance> attendances = attendanceRepository.findAllByMeetingWithStudent(meeting);
+        for (Attendance attendance : attendances) {
+            // Only include students who have joined (have agoraUid)
+            if (attendance.getAgoraUid() != null) {
+                Student student = attendance.getStudent();
+                ParticipantDTO studentParticipant = new ParticipantDTO();
+                studentParticipant.setAgoraUid(attendance.getAgoraUid());
+                studentParticipant.setDisplayName(student.getFirstName() + " " + student.getLastName());
+                studentParticipant.setHost(false);
+                participants.add(studentParticipant);
+            }
+        }
+
+        return participants;
     }
 }
