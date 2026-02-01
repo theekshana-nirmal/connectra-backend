@@ -113,7 +113,8 @@ public class AuthenticationService {
                 savedUser.getId(),
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
-                savedUser.getEmail());
+                savedUser.getEmail(),
+                savedUser.getAccountStatus().name());
     }
 
     // USER LOGIN
