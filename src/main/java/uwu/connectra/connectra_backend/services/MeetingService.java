@@ -459,6 +459,24 @@ public class MeetingService {
         responseDTO.setUId(agoraTokenGenerator.getCurrentUserUid());
         responseDTO.setChannelName(meeting.getAgoraChannelName());
 
+        // Get current user's name and role
+        Role currentUserRole = currentUserProvider.getCurrentUserRole();
+        String userName;
+        boolean isHost;
+
+        if (currentUserRole == Role.LECTURER) {
+            Lecturer lecturer = currentUserProvider.getCurrentUserAs(Lecturer.class);
+            userName = lecturer.getFirstName() + " " + lecturer.getLastName();
+            isHost = true;
+        } else {
+            Student student = currentUserProvider.getCurrentUserAs(Student.class);
+            userName = student.getFirstName() + " " + student.getLastName();
+            isHost = false;
+        }
+
+        responseDTO.setUserName(userName);
+        responseDTO.setHost(isHost);
+
         return responseDTO;
     }
 }
