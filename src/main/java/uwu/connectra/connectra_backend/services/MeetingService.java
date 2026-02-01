@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import uwu.connectra.connectra_backend.config.AgoraConfig;
 import uwu.connectra.connectra_backend.dtos.AgoraTokenResponseDTO;
 import uwu.connectra.connectra_backend.dtos.AttendanceReportResponseDTO;
+import uwu.connectra.connectra_backend.dtos.ParticipantDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
@@ -130,10 +131,13 @@ public class MeetingService {
         Meeting meeting = findMeetingById(meetingId);
         Role currentUserRole = currentUserProvider.getCurrentUserRole();
 
+        // Get UID first (needed for attendance tracking)
+        int agoraUid = agoraTokenGenerator.getCurrentUserUid();
+
         if (currentUserRole == Role.STUDENT) {
             validateStudentMeetingAccess(meeting);
             try {
-                attendanceService.recordStudentAttendanceOnJoin(meeting);
+                attendanceService.recordStudentAttendanceOnJoin(meeting, agoraUid);
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
                 // Ignore duplicate attendance record (race condition)
                 log.debug("Concurrent attendance recording detected for student in meeting {}", meetingId);
@@ -478,5 +482,38 @@ public class MeetingService {
         responseDTO.setHost(isHost);
 
         return responseDTO;
+    }
+
+    // Get active participants for a meeting (for name sync)
+    public List<ParticipantDTO> getActiveParticipants(String meetingId) {
+        Meeting meeting = findMeetingById(meetingId);
+        List<ParticipantDTO> participants = new java.util.ArrayList<>();
+
+        // Add lecturer (host)
+        Lecturer lecturer = meeting.getCreatedBy();
+        // Note: Lecturer doesn't have agoraUid stored, but we can identify them as host
+        // For the lecturer, we'll use their user ID as a fallback
+        ParticipantDTO lecturerParticipant = new ParticipantDTO();
+        lecturerParticipant.setAgoraUid((int) lecturer.getId());
+        lecturerParticipant.setDisplayName(lecturer.getFirstName() + " " + lecturer.getLastName());
+        lecturerParticipant.setHost(true);
+        participants.add(lecturerParticipant);
+
+        // Add students from attendance records (they have agoraUid)
+        if (meeting.getAttendances() != null) {
+            for (Attendance attendance : meeting.getAttendances()) {
+                // Only include students who have joined (have agoraUid) and haven't left
+                if (attendance.getAgoraUid() != null) {
+                    Student student = attendance.getStudent();
+                    ParticipantDTO studentParticipant = new ParticipantDTO();
+                    studentParticipant.setAgoraUid(attendance.getAgoraUid());
+                    studentParticipant.setDisplayName(student.getFirstName() + " " + student.getLastName());
+                    studentParticipant.setHost(false);
+                    participants.add(studentParticipant);
+                }
+            }
+        }
+
+        return participants;
     }
 }

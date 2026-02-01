@@ -33,7 +33,7 @@ public class AttendanceService {
      * The caller (MeetingService) must catch the exception and ignore it.
      */
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
-    public void recordStudentAttendanceOnJoin(Meeting meeting) {
+    public void recordStudentAttendanceOnJoin(Meeting meeting, Integer agoraUid) {
         Student currentStudent = currentUserProvider.getCurrentUserAs(Student.class);
         LocalDateTime now = LocalDateTime.now();
 
@@ -48,6 +48,7 @@ public class AttendanceService {
             attendance.setMeeting(meeting);
             attendance.setJoinedAt(now);
             attendance.setLastJoinedAt(now);
+            attendance.setAgoraUid(agoraUid);
             attendanceRepository.save(attendance);
             return;
         }
@@ -55,6 +56,7 @@ public class AttendanceService {
         // Update existing record (if user rejoins)
         autoLeaveStudentIfStillInMeeting(now, attendance);
         attendance.setLastJoinedAt(now);
+        attendance.setAgoraUid(agoraUid); // Update UID on rejoin
         attendanceRepository.save(attendance);
     }
 
