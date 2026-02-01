@@ -15,4 +15,6 @@ public class AgoraTokenResponseDTO {
     private String appId;
     private int uId;
     private String channelName;
+    private String userName;
+    private boolean isHost;
 }
