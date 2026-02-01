@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import uwu.connectra.connectra_backend.dtos.AgoraTokenResponseDTO;
 import uwu.connectra.connectra_backend.dtos.ApiResponse;
 import uwu.connectra.connectra_backend.dtos.AttendanceReportResponseDTO;
+import uwu.connectra.connectra_backend.dtos.ParticipantDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.CreateMeetingRequestDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.MeetingResponseDTO;
 import uwu.connectra.connectra_backend.dtos.meeting.UpdateMeetingRequestDTO;
@@ -108,6 +109,17 @@ public class MeetingController {
                                 true,
                                 "Left meeting successfully.",
                                 meetingService.leaveMeeting(meetingId))));
+        }
+
+        // Get active participants for name sync
+        @PreAuthorize("hasAnyRole('LECTURER', 'STUDENT')")
+        @GetMapping("/{meetingId}/participants")
+        @Operation(summary = "Get active participants in a meeting for name sync")
+        public ResponseEntity<ApiResponse<List<ParticipantDTO>>> getParticipants(@PathVariable String meetingId) {
+                return ResponseEntity.status(HttpStatus.OK).body((new ApiResponse<>(
+                                true,
+                                "Participants retrieved successfully.",
+                                meetingService.getActiveParticipants(meetingId))));
         }
 
         // Stop Meeting by its ID

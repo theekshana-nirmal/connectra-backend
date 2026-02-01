@@ -41,6 +41,10 @@ public abstract class User implements Serializable {
     @Column(nullable = false, updatable = false)
     private Role role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AccountStatus accountStatus = AccountStatus.ACTIVE;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

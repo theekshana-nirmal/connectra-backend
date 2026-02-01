@@ -29,6 +29,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     // Get all Attendance records for a Meeting
     List<Attendance> findAllByMeeting(Meeting meeting);
 
+    // Get all Attendance records for a Meeting with student eagerly fetched
+    @Query("SELECT a FROM Attendance a JOIN FETCH a.student WHERE a.meeting = :meeting")
+    List<Attendance> findAllByMeetingWithStudent(@Param("meeting") Meeting meeting);
+
     // Get students by attendance status for a specific meeting
     List<Attendance> findAllByMeetingAndAttendanceStatus(Meeting meeting, AttendanceStatus attendanceStatus);
 }

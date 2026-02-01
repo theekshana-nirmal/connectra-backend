@@ -42,6 +42,9 @@ public class Attendance {
     @Enumerated(EnumType.STRING)
     private AttendanceStatus attendanceStatus;
 
+    @Column(name = "agora_uid")
+    private Integer agoraUid;
+
     @CreatedDate
     @Column(updatable = false, name = "created_at")
     private LocalDateTime createdAt;

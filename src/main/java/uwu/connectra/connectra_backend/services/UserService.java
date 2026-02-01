@@ -6,8 +6,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import uwu.connectra.connectra_backend.dtos.lecturer.LecturerResponseDTO;
 import uwu.connectra.connectra_backend.dtos.lecturer.LecturerUpdateRequestDTO;
+import uwu.connectra.connectra_backend.entities.AccountStatus;
 import uwu.connectra.connectra_backend.entities.Lecturer;
 import uwu.connectra.connectra_backend.entities.Role;
+import uwu.connectra.connectra_backend.entities.User;
 import uwu.connectra.connectra_backend.exceptions.UserNotFoundException;
 import uwu.connectra.connectra_backend.repositories.UserRepository;
 
@@ -33,11 +35,11 @@ public class UserService {
                 user.getId(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getEmail()
-        );
+                user.getEmail(),
+                user.getAccountStatus().name());
     }
 
-    // DELETE USER BY ID
+    // DELETE USER BY ID (Permanent)
     public void deleteUserById(Long userId) {
         log.info("Attempting to delete user with ID: {}", userId);
         if (!userRepository.existsById(userId)) {
@@ -46,6 +48,32 @@ public class UserService {
         }
         userRepository.deleteById(userId);
         log.info("User with ID {} deleted successfully", userId);
+    }
+
+    // ACTIVATE USER ACCOUNT
+    public void activateUser(Long userId) {
+        log.info("Attempting to activate user with ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("Activation failed: User with ID {} not found", userId);
+                    return new UserNotFoundException("User with ID " + userId + " not found");
+                });
+        user.setAccountStatus(AccountStatus.ACTIVE);
+        userRepository.save(user);
+        log.info("User with ID {} activated successfully", userId);
+    }
+
+    // DEACTIVATE USER ACCOUNT (Soft Delete)
+    public void deactivateUser(Long userId) {
+        log.info("Attempting to deactivate user with ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("Deactivation failed: User with ID {} not found", userId);
+                    return new UserNotFoundException("User with ID " + userId + " not found");
+                });
+        user.setAccountStatus(AccountStatus.DEACTIVATED);
+        userRepository.save(user);
+        log.info("User with ID {} deactivated successfully", userId);
     }
 
     // === LECTURER RELATED OPERATIONS ===
@@ -58,8 +86,8 @@ public class UserService {
                         lecturer.getId(),
                         lecturer.getFirstName(),
                         lecturer.getLastName(),
-                        lecturer.getEmail()
-                ))
+                        lecturer.getEmail(),
+                        lecturer.getAccountStatus().name()))
                 .toList();
     }
 
@@ -96,7 +124,7 @@ public class UserService {
                 user.getId(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getEmail()
-        );
+                user.getEmail(),
+                user.getAccountStatus().name());
     }
 }
