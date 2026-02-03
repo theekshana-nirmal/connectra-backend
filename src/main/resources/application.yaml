@@ -19,18 +19,11 @@ spring:
       name: ${SPRING_USER}
       password: ${SPRING_PASSWORD}
 
-  # Email configuration for OTP verification
-  mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+# Brevo (Sendinblue) Email API configuration
+brevo:
+  api-key: ${BREVO_API_KEY}
+  sender-email: ${BREVO_SENDER_EMAIL}
+  sender-name: ${BREVO_SENDER_NAME}
 
 jwt:
   expiration:
