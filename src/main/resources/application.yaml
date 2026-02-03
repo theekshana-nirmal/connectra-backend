@@ -19,6 +19,19 @@ spring:
       name: ${SPRING_USER}
       password: ${SPRING_PASSWORD}
 
+  # Email configuration for OTP verification
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 jwt:
   expiration:
     access-token: 30 # in minutes (production: 30 minutes)
