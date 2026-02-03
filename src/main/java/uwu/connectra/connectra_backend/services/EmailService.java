@@ -34,7 +34,7 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail);
+            helper.setFrom(fromEmail, "Connectra");
             helper.setTo(toEmail);
             helper.setSubject("Verify your Connectra account - OTP Code");
 
@@ -44,7 +44,7 @@ public class EmailService {
             mailSender.send(message);
             log.info("OTP email sent successfully to: {}", toEmail);
 
-        } catch (MessagingException e) {
+        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
             log.error("Failed to send OTP email to: {}. Error: {}", toEmail, e.getMessage());
             throw new RuntimeException("Failed to send verification email", e);
         }
