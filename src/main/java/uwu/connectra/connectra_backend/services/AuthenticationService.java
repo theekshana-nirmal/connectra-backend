@@ -8,6 +8,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import uwu.connectra.connectra_backend.dtos.auth.RegisterResponseDTO;
 import uwu.connectra.connectra_backend.dtos.auth.UserAuthResponseDTO;
 import uwu.connectra.connectra_backend.dtos.auth.UserLoginRequestDTO;
 import uwu.connectra.connectra_backend.dtos.auth.UserRegisterRequestDTO;
@@ -28,9 +30,15 @@ public class AuthenticationService {
     private final StudentDetailsExtractor studentDetailsExtractor;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final OtpService otpService;
+    private final EmailService emailService;
 
-    // USER REGISTRATION
-    public UserAuthResponseDTO registerUser(UserRegisterRequestDTO request, HttpServletResponse httpServletResponse) {
+    /**
+     * Registers a new student user with PENDING_VERIFICATION status.
+     * Sends an OTP to the student's email for verification.
+     */
+    @Transactional
+    public RegisterResponseDTO registerUser(UserRegisterRequestDTO request) {
         log.info("Attempting to register user with email: {}", request.getEmail());
 
         // Check if user already exists
@@ -81,11 +89,87 @@ public class AuthenticationService {
         user.setEmail(request.getEmail().trim());
         user.setHashedPassword(passwordEncoder.encode(request.getPassword().trim()));
 
+        // Set status to PENDING_VERIFICATION until email is verified
+        user.setAccountStatus(AccountStatus.PENDING_VERIFICATION);
+        user.setEmailVerified(false);
+
         // Save user to the database
         User savedUser = userRepository.save(user);
-        log.info("User registered successfully: {}", savedUser.getEmail());
+        log.info("User created with PENDING_VERIFICATION status: {}", savedUser.getEmail());
 
-        return authResponse(savedUser, httpServletResponse);
+        // Generate and send OTP
+        String otp = otpService.createVerificationToken(savedUser.getEmail());
+        emailService.sendOtpEmail(savedUser.getEmail(), otp, savedUser.getFirstName());
+
+        log.info("OTP sent to email: {}", savedUser.getEmail());
+
+        return new RegisterResponseDTO(
+                savedUser.getEmail(),
+                "Registration successful! Please check your email for the verification code.",
+                true);
+    }
+
+    /**
+     * Verifies the email OTP and activates the user account.
+     */
+    @Transactional
+    public UserAuthResponseDTO verifyEmailAndActivateUser(String email, String otp,
+            HttpServletResponse httpServletResponse) {
+        log.info("Attempting to verify email for: {}", email);
+
+        // Verify OTP first
+        otpService.verifyOtp(email, otp);
+
+        // Find the user
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.error("User not found during email verification: {}", email);
+                    return new UserNotFoundException("User with email " + email + " not found");
+                });
+
+        // Check if already verified
+        if (user.isEmailVerified()) {
+            log.warn("Email already verified for: {}", email);
+            throw new BadRequestException("Email is already verified. Please login.");
+        }
+
+        // Activate the user
+        user.setEmailVerified(true);
+        user.setAccountStatus(AccountStatus.ACTIVE);
+        userRepository.save(user);
+
+        // Cleanup OTP tokens
+        otpService.cleanupTokens(email);
+
+        log.info("Email verified and user activated: {}", email);
+
+        return authResponse(user, httpServletResponse);
+    }
+
+    /**
+     * Resends the OTP to the user's email.
+     */
+    @Transactional
+    public void resendOtp(String email) {
+        log.info("Attempting to resend OTP for: {}", email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.error("User not found during OTP resend: {}", email);
+                    return new UserNotFoundException("User with email " + email + " not found");
+                });
+
+        // Check if already verified
+        if (user.isEmailVerified()) {
+            log.warn("Email already verified, cannot resend OTP for: {}", email);
+            throw new BadRequestException("Email is already verified. Please login.");
+        }
+
+        // Generate and send new OTP
+        String otp = otpService.createVerificationToken(email);
+        emailService.sendOtpEmail(email, otp, user.getFirstName());
+
+        log.info("New OTP sent to email: {}", email);
     }
 
     // LECTURER CREATION
@@ -104,6 +188,7 @@ public class AuthenticationService {
         lecturer.setLastName(request.getLastName().trim());
         lecturer.setEmail(request.getEmail().trim());
         lecturer.setHashedPassword(passwordEncoder.encode(request.getPassword().trim()));
+        lecturer.setEmailVerified(true); // Lecturers created by admin are auto-verified
 
         // Save user to the database
         User savedUser = userRepository.save(lecturer);
@@ -121,6 +206,28 @@ public class AuthenticationService {
     public UserAuthResponseDTO loginUser(UserLoginRequestDTO request, HttpServletResponse httpServletResponse)
             throws UserCredentialsInvalidException {
         log.info("Attempting login for user: {}", request.getEmail());
+
+        // Check if user exists and is verified before attempting authentication
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> {
+                    log.warn("Login failed: User not found: {}", request.getEmail());
+                    return new UserCredentialsInvalidException("Your email or password is incorrect");
+                });
+
+        // Check if email is verified
+        if (!user.isEmailVerified() && user.getRole() == Role.STUDENT) {
+            log.warn("Login blocked: Email not verified for: {}", request.getEmail());
+            throw new BadRequestException(
+                    "Please verify your email before logging in. Check your inbox for the verification code.");
+        }
+
+        // Check if account is deactivated
+        if (user.getAccountStatus() == AccountStatus.DEACTIVATED) {
+            log.warn("Login blocked: Account deactivated for: {}", request.getEmail());
+            throw new BadRequestException(
+                    "Your account has been deactivated. Please contact an administrator.");
+        }
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -130,12 +237,6 @@ public class AuthenticationService {
             log.warn("Login failed for user: {}. Invalid credentials.", request.getEmail());
             throw new UserCredentialsInvalidException("Your email or password is incorrect");
         }
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> {
-                    log.error("User not found after authentication: {}", request.getEmail());
-                    return new UserNotFoundException("User with email " + request.getEmail() + " not found");
-                });
 
         log.info("User logged in successfully: {}", user.getEmail());
         return authResponse(user, httpServletResponse);
