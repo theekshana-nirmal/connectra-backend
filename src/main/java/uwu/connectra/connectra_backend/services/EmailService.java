@@ -1,28 +1,48 @@
 package uwu.connectra.connectra_backend.services;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import sendinblue.ApiClient;
+import sendinblue.ApiException;
+import sendinblue.Configuration;
+import sendinblue.auth.ApiKeyAuth;
+import sibApi.TransactionalEmailsApi;
+import sibModel.CreateSmtpEmail;
+import sibModel.SendSmtpEmail;
+import sibModel.SendSmtpEmailSender;
+import sibModel.SendSmtpEmailTo;
+
+import java.util.Collections;
 
 /**
- * Service for sending emails.
- * Uses Spring Mail with async processing for non-blocking email sending.
+ * Service for sending emails using Brevo (Sendinblue) API.
+ * Uses async processing for non-blocking email sending.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final TransactionalEmailsApi apiInstance;
+    private final String senderEmail;
+    private final String senderName;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+    public EmailService(
+            @Value("${brevo.api-key}") String apiKey,
+            @Value("${brevo.sender-email}") String senderEmail,
+            @Value("${brevo.sender-name}") String senderName) {
+        
+        this.senderEmail = senderEmail;
+        this.senderName = senderName;
+
+        // Configure Brevo API client
+        ApiClient defaultClient = Configuration.getDefaultApiClient();
+        ApiKeyAuth apiKeyAuth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
+        apiKeyAuth.setApiKey(apiKey);
+
+        this.apiInstance = new TransactionalEmailsApi();
+    }
 
     /**
      * Sends an OTP verification email to the specified address.
@@ -31,21 +51,30 @@ public class EmailService {
     @Async
     public void sendOtpEmail(String toEmail, String otp, String firstName) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
 
-            helper.setFrom(fromEmail, "Connectra");
-            helper.setTo(toEmail);
-            helper.setSubject("Verify your Connectra account - OTP Code");
+            // Set sender
+            SendSmtpEmailSender sender = new SendSmtpEmailSender();
+            sender.setEmail(senderEmail);
+            sender.setName(senderName);
+            sendSmtpEmail.setSender(sender);
 
-            String htmlContent = buildOtpEmailTemplate(otp, firstName);
-            helper.setText(htmlContent, true);
+            // Set recipient
+            SendSmtpEmailTo to = new SendSmtpEmailTo();
+            to.setEmail(toEmail);
+            to.setName(firstName);
+            sendSmtpEmail.setTo(Collections.singletonList(to));
 
-            mailSender.send(message);
-            log.info("OTP email sent successfully to: {}", toEmail);
+            // Set subject and content
+            sendSmtpEmail.setSubject("Verify your Connectra account - OTP Code");
+            sendSmtpEmail.setHtmlContent(buildOtpEmailTemplate(otp, firstName));
 
-        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
-            log.error("Failed to send OTP email to: {}. Error: {}", toEmail, e.getMessage());
+            // Send email
+            CreateSmtpEmail result = apiInstance.sendTransacEmail(sendSmtpEmail);
+            log.info("OTP email sent successfully to: {}. Message ID: {}", toEmail, result.getMessageId());
+
+        } catch (ApiException e) {
+            log.error("Failed to send OTP email to: {}. Error: {} - {}", toEmail, e.getCode(), e.getResponseBody());
             throw new RuntimeException("Failed to send verification email", e);
         }
     }

@@ -39,15 +39,19 @@ public class OtpService {
     }
 
     /**
-     * Creates and stores a new verification token for the given email.
-     * Returns the generated OTP.
+     * Creates and stores a new verification token with pending registration data.
+     * User is NOT saved to DB until OTP is verified.
      */
     @Transactional
-    public String createVerificationToken(String email) {
+    public String createVerificationToken(String email, String firstName, String lastName, String hashedPassword) {
+        // Delete any existing tokens for this email
+        tokenRepository.deleteByEmail(email);
+
         String otp = generateOtp();
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(OTP_EXPIRATION_MINUTES);
 
-        EmailVerificationToken token = new EmailVerificationToken(email, otp, expiresAt);
+        EmailVerificationToken token = new EmailVerificationToken(
+                email, otp, expiresAt, firstName, lastName, hashedPassword);
         tokenRepository.save(token);
 
         log.info("Created verification token for email: {}", email);
@@ -55,17 +59,18 @@ public class OtpService {
     }
 
     /**
-     * Verifies the OTP for the given email.
+     * Verifies the OTP for the given email and returns the token with registration
+     * data.
      * Throws OtpExpiredException if the OTP has expired.
      * Throws OtpInvalidException if the OTP is incorrect.
      */
     @Transactional
-    public void verifyOtp(String email, String otp) {
+    public EmailVerificationToken verifyOtpAndGetToken(String email, String otp) {
         Optional<EmailVerificationToken> tokenOpt = tokenRepository.findTopByEmailOrderByCreatedAtDesc(email);
 
         if (tokenOpt.isEmpty()) {
             log.warn("No OTP found for email: {}", email);
-            throw new OtpInvalidException("No verification code found. Please request a new one.");
+            throw new OtpInvalidException("No verification code found. Please register again.");
         }
 
         EmailVerificationToken token = tokenOpt.get();
@@ -79,7 +84,7 @@ public class OtpService {
         // Check if expired
         if (token.isExpired()) {
             log.warn("OTP expired for email: {}", email);
-            throw new OtpExpiredException("Verification code has expired. Please request a new one.");
+            throw new OtpExpiredException("Verification code has expired. Please register again.");
         }
 
         // Check if OTP matches
@@ -93,6 +98,15 @@ public class OtpService {
         tokenRepository.save(token);
 
         log.info("OTP verified successfully for email: {}", email);
+        return token;
+    }
+
+    /**
+     * Checks if there is a pending (unverified) registration for the email.
+     */
+    public boolean hasPendingRegistration(String email) {
+        Optional<EmailVerificationToken> tokenOpt = tokenRepository.findTopByEmailOrderByCreatedAtDesc(email);
+        return tokenOpt.isPresent() && !tokenOpt.get().isVerified() && !tokenOpt.get().isExpired();
     }
 
     /**
