@@ -45,6 +45,9 @@ public abstract class User implements Serializable {
     @Column(nullable = false)
     private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

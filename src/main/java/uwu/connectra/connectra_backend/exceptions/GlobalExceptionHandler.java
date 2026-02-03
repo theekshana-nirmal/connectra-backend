@@ -118,4 +118,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(false, ex.getMessage(), null));
     }
+
+    // Handle OtpExpiredException
+    @ExceptionHandler(OtpExpiredException.class)
+    public ResponseEntity<ApiResponse<String>> handleOtpExpiredException(OtpExpiredException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
+
+    // Handle OtpInvalidException
+    @ExceptionHandler(OtpInvalidException.class)
+    public ResponseEntity<ApiResponse<String>> handleOtpInvalidException(OtpInvalidException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, ex.getMessage(), null));
+    }
 }

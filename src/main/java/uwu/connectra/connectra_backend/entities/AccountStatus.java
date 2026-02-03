@@ -6,5 +6,6 @@ package uwu.connectra.connectra_backend.entities;
  */
 public enum AccountStatus {
     ACTIVE,
-    DEACTIVATED
+    DEACTIVATED,
+    PENDING_VERIFICATION
 }
